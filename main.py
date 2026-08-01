@@ -10,7 +10,6 @@ def main():
         low = fetch_byte(mem, reg)
         high = fetch_byte(mem, reg)
         reg.sp = (high << 8) | low
-        # Flags: Z=0, N=0, H=0, C=0
 
     def ld_r16_d16(mem, reg, high_name, low_name):
         low = fetch_byte(mem, reg)
