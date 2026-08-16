@@ -5,17 +5,85 @@ def main():
     reg = Registers()
     path = "roms/dmg_boot.bin"
 
+    # LD r8 to R8 mapper
+    r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
+
+    ld_r8_r8_table = {}
+    for dst_index, dst_name in enumerate(r8_order):
+        for src_index, src_name in enumerate(r8_order):
+            if dst_name is None or src_name is None:
+                continue  # Skip (HL) cases and skip 0x76 (HAL) naturally
+            opcode = 0x40 + (dst_index << 3) + src_index
+            ld_r8_r8_table[opcode] = (dst_name, src_name)
+
+
+
+
     # Helpers
+
+    def push_r16(mem, reg, high_name, low_name):
+        low = getattr(reg, low_name)
+        high = getattr(reg, high_name)
+
+        reg.sp = (reg.sp - 1) & 0xFFFF
+        mem[reg.sp] = high
+
+        reg.sp = (reg.sp - 1) & 0xFFFF
+        mem[reg.sp] = low
+
+
+    def pop_r16(mem, reg, high_name, low_name):
+        low = mem[reg.sp]
+        reg.sp = (reg.sp + 1) & 0xFFFF
+        high = mem[reg.sp]
+        reg.sp = (reg.sp + 1) & 0xFFFF
+        setattr(reg, high_name, high)
+        setattr(reg, low_name, low)
+
     def ld_sp_d16(mem, reg):
         low = fetch_byte(mem, reg)
         high = fetch_byte(mem, reg)
         reg.sp = (high << 8) | low
+
+    def inc8(reg, reg_name):
+        val = getattr(reg, reg_name)
+        low_nibble = val & 0x0F
+        half_carry = (low_nibble == 0x0F)
+        inc_val = (val + 1) & 0xFF
+        setattr(reg, reg_name, inc_val)
+        # Set flags
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+
+        reg.f &= ~(z_mask | n_mask | h_mask)  # clear only Z, N, H — leave C alone
+        if inc_val == 0:
+            reg.f |= z_mask
+        if half_carry:
+            reg.f |= h_mask
+
+    def ld_r8_r8(reg, dest_name, src_name):
+        setattr(reg, dest_name, getattr(reg, src_name))
 
     def ld_r16_d16(mem, reg, high_name, low_name):
         low = fetch_byte(mem, reg)
         high = fetch_byte(mem, reg)
         setattr(reg, high_name, high)
         setattr(reg, low_name, low)
+
+    def ld_r8_d8(mem, reg, reg_name):
+        r8 = fetch_byte(mem, reg)
+        setattr(reg, reg_name, r8)
+        
+    def ld_hl_a(mem, reg):
+        hl = (reg.h << 8) | reg.l
+        mem[hl] = reg.a
+
+    def ld_a_r16(mem, reg, high_name, low_name):
+        high = getattr(reg, high_name)
+        low = getattr(reg, low_name)
+        addr = (high << 8) | low
+        reg.a = mem[addr]
 
     def ld_hl_dec_a(mem, reg):
         hl = (reg.h << 8) | reg.l
@@ -24,9 +92,47 @@ def main():
         reg.h = (hl >> 8) & 0xFF
         reg.l = hl & 0xFF
 
+    def ld_c_a(mem, reg):
+        base = 0xFF00
+        val = reg.c
+        mem[base + val] = reg.a
+
+    def jr_nz_r8(mem, reg):
+        r8 = fetch_byte(mem, reg)
+        if r8 >= 0x80:
+            r8 -= 0x100  # Convert to signed
+        if reg.f & 0x80 == 0:
+            reg.pc = (reg.pc + r8) & 0xFFFF  # Jump to new address, wrap around at 16 bits
+
     def xor_a(reg):
         reg.a ^= reg.a
         reg.f = 0x80  # Set Z flag, clear N, H, C flags
+
+    def rl_r8(reg, reg_name):
+        carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C)
+        new_carry = (getattr(reg, reg_name) & 0x80) >> 7
+        new_value = ((getattr(reg, reg_name) << 1) | carry)
+        setattr(reg, reg_name, new_value & 0xFF)  # Ensure it's 8 bits
+        
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20    
+        if new_value & 0xFF == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+            
+
+
+    def rla(reg):
+        carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C)
+        new_carry = (reg.a & 0x80) >> 7
+        reg.a = ((reg.a << 1) | carry) & 0xFF  # Shift left and add old carry
+        # Clear Z, N, H flags, set C flag
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        reg.f &= ~(z_mask | n_mask | h_mask)  # Clear Z, N, H flags
+        if new_carry:   
+            reg.f |= 0x10  # Set C flag if new carry is 1
 
     # CB instruction handlers
     def bit_7_h(reg):
@@ -46,7 +152,28 @@ def main():
         else:
             reg.f |= z_mask 
 
+    def call_a16(mem, reg):
+        # Fetch the 16-bit address
+        low = fetch_byte(mem, reg)
+        high = fetch_byte(mem, reg)
+        addr = (high << 8) | low
 
+        # Push the current PC onto the stack
+        ret_addr = reg.pc
+        high_byte = (ret_addr >> 8) & 0xFF
+        low_byte = ret_addr & 0xFF
+
+        reg.sp = (reg.sp - 1) & 0xFFFF
+        mem[reg.sp] = high_byte
+        reg.sp = (reg.sp - 1) & 0xFFFF
+        mem[reg.sp] = low_byte
+        
+        # Jump to the address
+        reg.pc = addr
+        
+    def ldh_a8_a(mem, reg):
+        a8 = fetch_byte(mem, reg)
+        mem[0xFF00 + a8] = reg.a
 
     def load_rom(path):
         with open(path, 'rb') as f:
@@ -58,11 +185,6 @@ def main():
         hex_bytes = ' '.join(f'{byte:02X}' for byte in chunk)
         print(f"{start:04X}: {hex_bytes}")    
 
-    def fetch_byte(mem, reg):
-        byte = mem[reg.pc]
-        reg.pc += 1
-        return byte
-
     def decode_cb(mem, reg):
         cb_opcode = fetch_byte(mem, reg)
         print(f"CB Opcode: {cb_opcode:02X}")
@@ -71,7 +193,16 @@ def main():
             case 0x7C:
                 # BIT 7, H
                 bit_7_h(reg)
+                return True
+            case _:
+                print(f"Unknown opcode: {cb_opcode:02X}")
+                return False
 
+    def fetch_byte(mem, reg):
+        byte = mem[reg.pc]
+        reg.pc += 1
+        return byte
+    
     def fetch_opcode(mem, reg):
         return fetch_byte(mem, reg)
 
@@ -84,20 +215,55 @@ def main():
         # # LD instructions
         #     0x31: "LD SP, d16",
         # }
+
+        if opcode in ld_r8_r8_table:
+            dst, src = ld_r8_r8_table[opcode]
+            ld_r8_r8(reg, dst, src)
+            return True
         
         match opcode:
             case 0xCB:
-                decode_cb(mem, reg)
+                return decode_cb(mem, reg)
+            case 0xC1:
+                pop_r16(mem, reg, 'b', 'c')
+            case 0xC5:
+                push_r16(mem, reg, 'b', 'c')
+            case 0x06:
+                ld_r8_d8(mem, reg, 'b')
+            case 0x11:
+                ld_r16_d16(mem, reg, 'd', 'e')
+            case 0x17:
+                rla(reg)
+            case 0x1A:
+                ld_a_r16(mem, reg, 'd', 'e')
             case 0x31:
                 ld_sp_d16(mem, reg)
             case 0xAF:
                 xor_a(reg)
+            case 0x20:
+                jr_nz_r8(mem, reg)
             case 0x21:
                 ld_r16_d16(mem, reg, 'h', 'l')
             case 0x32:
                 ld_hl_dec_a(mem, reg)
+            case 0xCD:
+                call_a16(mem, reg)
+            case 0x3E:
+                ld_r8_d8(mem, reg, 'a')
+            case 0x0C:
+                inc8(reg, 'c')
+            case 0x0E:
+                ld_r8_d8(mem, reg, 'c')
+            case 0x77:
+                ld_hl_a(mem, reg)
+            case 0xE0:
+                ldh_a8_a(mem, reg)
+            case 0xE2:
+                ld_c_a(mem, reg)
             case _:
                 print(f"Unknown opcode: {opcode:02X}")
+                return False
+        return True
 
     rom_data = load_rom(path)
 
@@ -111,15 +277,15 @@ def main():
     while running:
         addr = reg.pc
         opcode = fetch_opcode(mem, reg)
-        decode(mem, reg, opcode)
+        running = decode(mem, reg, opcode)
         print(f"PC: {addr:04X}, Opcode: {opcode:02X}, Registers: {reg}")
         count += 1
-        if count >= 10:
+        if count >= 25000:
             running = False
-            
-    dump_memory(mem, start=0x0000)
-    dump_memory(mem, start=0x0100)
-    dump_memory(mem, start=0x9FF0, length=16)
+
+        print(count)
+
+        dump_memory(mem, start=0xFFF6, length=32) 
     
 if __name__ == "__main__":
     main()
