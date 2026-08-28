@@ -80,6 +80,7 @@ def main():
         z_mask = 0x80
         n_mask = 0x40
         h_mask = 0x20
+
         reg.f &= ~(z_mask | n_mask | h_mask)
         if dec_val == 0:
             reg.f |= z_mask
@@ -89,10 +90,11 @@ def main():
 
     def inc8(reg, reg_name):
         val = getattr(reg, reg_name)
-        low_nibble = val & 0x0F
-        half_carry = (low_nibble == 0x0F)
+        low = val & 0x0F
+        half_carry = (low == 0x0F)
         inc_val = (val + 1) & 0xFF
         setattr(reg, reg_name, inc_val)
+
         # Set flags
         z_mask = 0x80
         n_mask = 0x40
@@ -107,6 +109,17 @@ def main():
     def xor_a(reg):
         reg.a ^= reg.a
         reg.f = 0x80  # Set Z flag, clear N, H, C flags
+
+   # --- 16-bit Arithmetic/Logic instructions ---
+    def step_r16(reg, high_name, low_name, step):
+        high = getattr(reg, high_name)
+        low = getattr(reg, low_name)
+        val = (high << 8) | low
+        val = (val + step) & 0xFFFF  # Increment/Decrement
+        high = (val >> 8) & 0xFF
+        low = val & 0xFF
+        setattr(reg, high_name, (high))
+        setattr(reg, low_name, (low))
 
     # --- Rotate/Shift instructions ---
     def rla(reg):
@@ -166,6 +179,14 @@ def main():
 
         reg.sp = (reg.sp - 1) & 0xFFFF
         mem[reg.sp] = low
+
+    def  ret(mem, reg):
+        low = mem[reg.sp]
+        reg.sp = (reg.sp + 1) & 0xFFFF
+        high = mem[reg.sp]
+        reg.sp = (reg.sp + 1) & 0xFFFF
+        addr = (high << 8 ) | low
+        reg.pc = addr
 
     # --- CB-prefixed instruction handlers ---
     def rl_r8(reg, reg_name):
@@ -236,59 +257,57 @@ def main():
         print(f"{start:04X}: {hex_bytes}")
 
     def decode(mem, reg, opcode):
-        # IGNORE OP TABLE FOR NOW
-        # op_table = {
-        # # MISC instructions
-        #     0x00: "NOP",
-
-        # # LD instructions
-        #     0x31: "LD SP, d16",
-        # }
-
+        
         if opcode in ld_r8_r8_table:
             dst, src = ld_r8_r8_table[opcode]
             ld_r8_r8(reg, dst, src)
             return True, opcode
 
         match opcode:
-            case 0xCB:
-                return decode_cb(mem, reg)
-            case 0xC1:
-                pop_r16(mem, reg, 'b', 'c')
-            case 0xC5:
-                push_r16(mem, reg, 'b', 'c')
             case 0x05:
                 dec8(reg, 'b')
             case 0x06:
                 ld_r8_d8(mem, reg, 'b')
+            case 0x0C:
+                inc8(reg, 'c')
+            case 0x0E:
+                ld_r8_d8(mem, reg, 'c')
             case 0x11:
                 ld_r16_d16(mem, reg, 'd', 'e')
+            case 0x13:
+                step_r16(reg, 'd', 'e', 1)
             case 0x17:
                 rla(reg)
             case 0x1A:
                 ld_a_r16(mem, reg, 'd', 'e')
-            case 0x31:
-                ld_sp_d16(mem, reg)
-            case 0xAF:
-                xor_a(reg)
             case 0x20:
                 jr_nz_r8(mem, reg)
             case 0x21:
                 ld_r16_d16(mem, reg, 'h', 'l')
             case 0x22:
                 ld_hl_step_a(mem, reg, 1)
+            case 0x23:
+                step_r16(reg, 'h', 'l', 1)
+            case 0x31:
+                ld_sp_d16(mem, reg)
             case 0x32:
                 ld_hl_step_a(mem, reg, -1)
-            case 0xCD:
-                call_a16(mem, reg)
             case 0x3E:
                 ld_r8_d8(mem, reg, 'a')
-            case 0x0C:
-                inc8(reg, 'c')
-            case 0x0E:
-                ld_r8_d8(mem, reg, 'c')
             case 0x77:
                 ld_hl_a(mem, reg)
+            case 0xAF:
+                xor_a(reg)
+            case 0xC1:
+                pop_r16(mem, reg, 'b', 'c')
+            case 0xC5:
+                push_r16(mem, reg, 'b', 'c')
+            case 0xC9:
+                ret(mem, reg)
+            case 0xCB:
+                return decode_cb(mem, reg)
+            case 0xCD:
+                call_a16(mem, reg)
             case 0xE0:
                 ldh_a8_a(mem, reg)
             case 0xE2:
@@ -319,7 +338,6 @@ def main():
 
         print(count)
 
-        dump_memory(mem, start=0xFFF6, length=32) 
-    
+
 if __name__ == "__main__":
     main()
