@@ -3,7 +3,7 @@ from cpu import Registers
 
 def main():
     reg = Registers()
-    path = "roms/dmg_boot.bin"
+    boot_rom_path = "roms/dmg_boot.bin"
 
     # LD r8 to R8 mapper
     r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
@@ -16,11 +16,7 @@ def main():
             opcode = 0x40 + (dst_index << 3) + src_index
             ld_r8_r8_table[opcode] = (dst_name, src_name)
 
-
-
-
-    # Helpers
-
+    ## Helpers
     # --- 8-bit Load instructions ---
     def ld_r8_d8(mem, reg, reg_name):
         r8 = fetch_byte(mem, reg)
@@ -46,6 +42,10 @@ def main():
         hl = (reg.h << 8) | reg.l
         mem[hl] = reg.a
 
+    def ld_a_a8(mem, reg):
+        a8 = fetch_byte(mem, reg)
+        reg.a = mem[0xFF00 + a8]
+
     def ldh_a8_a(mem, reg):
         a8 = fetch_byte(mem, reg)
         mem[0xFF00 + a8] = reg.a
@@ -56,6 +56,13 @@ def main():
         mem[base + val] = reg.a
 
     # --- 16-bit Load instructions ---
+
+    def ld_a16_a(mem, reg):
+        low = fetch_byte(mem, reg)
+        high = fetch_byte(mem, reg)
+        addr = high << 8 | low
+        mem[addr] = reg.a
+
     def ld_r16_d16(mem, reg, high_name, low_name):
         low = fetch_byte(mem, reg)
         high = fetch_byte(mem, reg)
@@ -81,18 +88,99 @@ def main():
         n_mask = 0x40
         h_mask = 0x20
 
+        # CLEAR THE FLAGS
         reg.f &= ~(z_mask | n_mask | h_mask)
+
         if dec_val == 0:
             reg.f |= z_mask
         if half_borrow:
             reg.f |= h_mask
         reg.f |= n_mask  # Set N flag for decrement operation
 
+    def cp_a_hl(mem, reg):
+        hl = (reg.h << 8) | reg.l
+        val = mem[hl]
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+        low_a = reg.a & 0x0F
+        low_val = val & 0x0F
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)        
+        if reg.b == reg.a:
+            reg.f |= 0x80  # Set Z flag if result is zero
+        else:
+            reg.f &= ~0x80  # Clear Z flag if result is not zero
+        if low_a < low_val:
+            reg.f |= h_mask  # Set H flag for half borrow
+        # If B > A set C
+        if val > reg.a:
+            reg.f |= c_mask
+        reg.f |= 0x40  # Set N flag for subtraction
+
+    def cp_d8(mem, reg):
+        val = fetch_byte(mem, reg)
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)
+
+        if reg.a == val:
+            reg.f |= z_mask
+
+        # SET N REGARDLESS
+        reg.f |= n_mask
+
+        # Half and full borrow
+
+        low_a = reg.a & 0x0F
+        low_val = val & 0x0F
+        half_borrow = low_a < low_val
+
+        if half_borrow : 
+            reg.f |= h_mask
+
+        full_borrow = reg.a < val
+        if full_borrow:
+            reg.f |= c_mask
+
+    def sub_a_b(reg):
+        # subtract b from a
+        val = reg.b
+        reg.a = (reg.a - val) & 0xFF
+
+        # get both nibbles
+        low_a = reg.a & 0x0F
+        low_val = val & 0x0F
+        # Flags
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
+        if reg.b == reg.a:
+            reg.f |= 0x80  # Set Z flag if result is zero
+        else:
+            reg.f &= ~0x80  # Clear Z flag if result is not zero
+        if low_a < low_val:
+            reg.f |= h_mask  # Set H flag for half borrow
+        # If B > A set C
+        if val > reg.a:
+            reg.f |= c_mask
+        reg.f |= 0x40  # Set N flag for subtraction
+
+    
+
+
     def inc8(reg, reg_name):
         val = getattr(reg, reg_name)
         low = val & 0x0F
         half_carry = (low == 0x0F)
-        inc_val = (val + 1) & 0xFF
+        inc_val = (val + 1) & 0xFF 
         setattr(reg, reg_name, inc_val)
 
         # Set flags
@@ -134,12 +222,25 @@ def main():
         if new_carry:
             reg.f |= 0x10  # Set C flag if new carry is 1
 
-    # --- Jump/Call instructions ---
+    # --- 8-bit Jump/Call instructions ---
     def jr_nz_r8(mem, reg):
         r8 = fetch_byte(mem, reg)
         if r8 >= 0x80:
             r8 -= 0x100  # Convert to signed
         if reg.f & 0x80 == 0:
+            reg.pc = (reg.pc + r8) & 0xFFFF  # Jump to new address, wrap around at 16 bits
+
+    def jr_r8(mem, reg):
+        r8 = fetch_byte(mem, reg)
+        if r8 >= 0x80:
+            r8 -= 0x100  # Convert to signed
+        reg.pc = (reg.pc + r8) & 0xFFFF
+
+    def jr_z_r8(mem, reg):
+        r8 = fetch_byte(mem, reg)
+        if r8 >= 0x80:
+            r8 -= 0x100  # Convert to signed
+        if reg.f & 0x80 == 0x80:
             reg.pc = (reg.pc + r8) & 0xFFFF  # Jump to new address, wrap around at 16 bits
 
     def call_a16(mem, reg):
@@ -180,7 +281,7 @@ def main():
         reg.sp = (reg.sp - 1) & 0xFFFF
         mem[reg.sp] = low
 
-    def  ret(mem, reg):
+    def ret(mem, reg):
         low = mem[reg.sp]
         reg.sp = (reg.sp + 1) & 0xFFFF
         high = mem[reg.sp]
@@ -240,6 +341,7 @@ def main():
     # --- Utility functions ---
     def fetch_byte(mem, reg):
         byte = mem[reg.pc]
+        print(f"    fetch_byte @ {reg.pc:04X} -> {byte:02X}")
         reg.pc += 1
         return byte
 
@@ -264,22 +366,36 @@ def main():
             return True, opcode
 
         match opcode:
+            case 0x04:
+                inc8(reg, 'b')
             case 0x05:
                 dec8(reg, 'b')
             case 0x06:
                 ld_r8_d8(mem, reg, 'b')
             case 0x0C:
                 inc8(reg, 'c')
+            case 0x0D:
+                dec8(reg, 'c')
             case 0x0E:
                 ld_r8_d8(mem, reg, 'c')
             case 0x11:
                 ld_r16_d16(mem, reg, 'd', 'e')
             case 0x13:
                 step_r16(reg, 'd', 'e', 1)
+            case 0x15:
+                dec8(reg, 'd')
+            case 0x16:
+                ld_r8_d8(mem, reg, 'd')
             case 0x17:
                 rla(reg)
+            case 0x18:
+                jr_r8(mem, reg)
             case 0x1A:
                 ld_a_r16(mem, reg, 'd', 'e')
+            case 0x1D:
+                dec8(reg, 'e')
+            case 0x1E:
+                ld_r8_d8(mem, reg, 'e')
             case 0x20:
                 jr_nz_r8(mem, reg)
             case 0x21:
@@ -288,16 +404,28 @@ def main():
                 ld_hl_step_a(mem, reg, 1)
             case 0x23:
                 step_r16(reg, 'h', 'l', 1)
+            case 0x24:
+                inc8(reg, 'h')
+            case 0x28:
+                jr_z_r8(mem, reg)
+            case 0x2E:
+                ld_r8_d8(mem, reg, 'l')
+            case 0x3D:
+                dec8(reg, 'a')
             case 0x31:
                 ld_sp_d16(mem, reg)
             case 0x32:
                 ld_hl_step_a(mem, reg, -1)
             case 0x3E:
                 ld_r8_d8(mem, reg, 'a')
+            case 0x90:
+                sub_a_b(reg)
             case 0x77:
                 ld_hl_a(mem, reg)
             case 0xAF:
                 xor_a(reg)
+            case 0xBE:
+                cp_a_hl(mem, reg)
             case 0xC1:
                 pop_r16(mem, reg, 'b', 'c')
             case 0xC5:
@@ -312,17 +440,23 @@ def main():
                 ldh_a8_a(mem, reg)
             case 0xE2:
                 ld_c_a(mem, reg)
+            case 0xEA:
+                ld_a16_a(mem, reg)
+            case 0xF0:
+                ld_a_a8(mem, reg)
+            case 0xFE:
+                cp_d8(mem, reg)
             case _:
                 print(f"Unknown opcode: {opcode:02X}")
                 return False, opcode
         return True, opcode
 
-    rom_data = load_rom(path)
+    boot_rom_data = load_rom(boot_rom_path)
 
     mem = bytearray(0x10000)  # 64KB of memory
 
-    mem[0x0000:0x0000 + len(rom_data)] = rom_data
-
+    mem[0x0000:0x0000 + len(boot_rom_data)] = boot_rom_data
+    mem[0xFF44] = 0x90
     count = 0
     running = True
 
@@ -333,7 +467,7 @@ def main():
         prefix = "CB " if opcode == 0xCB else ""
         print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count >= 25000:
+        if count >= 50000:
             running = False
 
         print(count)

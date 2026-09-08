@@ -24,11 +24,6 @@ class Registers():
     def de(self):
         return (self.d << 8) | self.e
 
-    @de.setter
-    def de(self, value):
-        self.d = (value >> 8) & 0xFF
-        self.e = value & 0xFF
-
     @property
     def af(self):
         return (self.a << 8) | self.f
