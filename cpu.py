@@ -11,6 +11,7 @@ class Registers():
         self.pc = 0x0000
         self.sp = 0x0000
 
+        self.ime = False
     # Register pairs
     @property
     def bc(self):

@@ -2,8 +2,12 @@ from cpu import Registers
 
 
 def main():
+
+    debug = False   # Set for debugging
+
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
+    cartridge_path = "roms/Tetris.gb"
 
     # LD r8 to R8 mapper
     r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
@@ -108,7 +112,7 @@ def main():
         low_val = val & 0x0F
 
         reg.f &= ~(z_mask | n_mask | h_mask | c_mask)        
-        if reg.b == reg.a:
+        if val == reg.a:
             reg.f |= 0x80  # Set Z flag if result is zero
         else:
             reg.f &= ~0x80  # Clear Z flag if result is not zero
@@ -147,14 +151,16 @@ def main():
         if full_borrow:
             reg.f |= c_mask
 
-    def sub_a_b(reg):
-        # subtract b from a
-        val = reg.b
-        reg.a = (reg.a - val) & 0xFF
-
-        # get both nibbles
+    def add_a_hl(mem, reg):
+        hl = (reg.h << 8) | reg.l
+        val = mem[hl]
+        original_a = reg.a
         low_a = reg.a & 0x0F
         low_val = val & 0x0F
+
+        result = (reg.a + val) & 0xFF
+        reg.a = result
+
         # Flags
         z_mask = 0x80
         n_mask = 0x40
@@ -162,19 +168,42 @@ def main():
         c_mask = 0x10
 
         reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
-        if reg.b == reg.a:
-            reg.f |= 0x80  # Set Z flag if result is zero
-        else:
-            reg.f &= ~0x80  # Clear Z flag if result is not zero
+
+        if result == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+        if low_a + low_val > 0x0F:
+            reg.f |= h_mask  # Set H flag for half carry
+        # If B > A set C
+        if original_a + val > 0xFF:
+            reg.f |= c_mask
+
+    def sub_a_b(reg):
+        # subtract b from a
+        val = reg.b
+        original_a = reg.a
+        # get both nibbles
+        low_a = reg.a & 0x0F
+        low_val = val & 0x0F
+
+        result = (reg.a - val) & 0xFF
+        reg.a = result
+
+        # Flags
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
+
+        if result == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+        reg.f |= n_mask  # Set N flag for subtraction
         if low_a < low_val:
             reg.f |= h_mask  # Set H flag for half borrow
         # If B > A set C
-        if val > reg.a:
+        if original_a < val:
             reg.f |= c_mask
-        reg.f |= 0x40  # Set N flag for subtraction
-
-    
-
 
     def inc8(reg, reg_name):
         val = getattr(reg, reg_name)
@@ -263,6 +292,12 @@ def main():
         reg.pc = addr
 
     # --- Stack instructions ---
+    def jp(mem, reg):
+        low = fetch_byte(mem, reg)
+        high = fetch_byte(mem, reg)
+        addr = (high << 8) | low
+        reg.pc = addr
+
     def pop_r16(mem, reg, high_name, low_name):
         low = mem[reg.sp]
         reg.sp = (reg.sp + 1) & 0xFFFF
@@ -335,13 +370,15 @@ def main():
                 rl_r8(reg, 'c')
                 return True, cb_opcode
             case _:
-                print(f"Unknown opcode: {cb_opcode:02X}")
+                print(f"Unknown CB opcode: {cb_opcode:02X} at PC {(reg.pc - 2) & 0xFFFF:04X}")
+                print(f"  Registers: {reg}")
                 return False, cb_opcode
 
     # --- Utility functions ---
     def fetch_byte(mem, reg):
         byte = mem[reg.pc]
-        print(f"    fetch_byte @ {reg.pc:04X} -> {byte:02X}")
+        if debug:
+            print(f"    fetch_byte @ {reg.pc:04X} -> {byte:02X}")
         reg.pc += 1
         return byte
 
@@ -366,6 +403,8 @@ def main():
             return True, opcode
 
         match opcode:
+            case 0x00:
+                pass  # NOP
             case 0x04:
                 inc8(reg, 'b')
             case 0x05:
@@ -422,12 +461,16 @@ def main():
                 sub_a_b(reg)
             case 0x77:
                 ld_hl_a(mem, reg)
+            case 0x86:
+                add_a_hl(mem, reg)
             case 0xAF:
                 xor_a(reg)
             case 0xBE:
                 cp_a_hl(mem, reg)
             case 0xC1:
                 pop_r16(mem, reg, 'b', 'c')
+            case 0xC3:
+                jp(mem, reg)
             case 0xC5:
                 push_r16(mem, reg, 'b', 'c')
             case 0xC9:
@@ -444,18 +487,30 @@ def main():
                 ld_a16_a(mem, reg)
             case 0xF0:
                 ld_a_a8(mem, reg)
+            case 0xF3:
+                reg.ime = False
+            case 0xFB:
+                # EI — on real hardware interrupts are enabled AFTER the next
+                # instruction executes, not immediately. Harmless until
+                # interrupt dispatch exists; revisit then.
+                reg.ime = True
             case 0xFE:
                 cp_d8(mem, reg)
             case _:
-                print(f"Unknown opcode: {opcode:02X}")
+                print(f"Unknown opcode: {opcode:02X} at PC {(reg.pc - 1) & 0xFFFF:04X}")
+                print(f"  Registers: {reg}")
                 return False, opcode
         return True, opcode
 
+    rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
 
     mem = bytearray(0x10000)  # 64KB of memory
 
-    mem[0x0000:0x0000 + len(boot_rom_data)] = boot_rom_data
+    mem[0x0000:0x0000 + len(rom_data)] = rom_data
+    # Store first 256 bytes of ROM and set aside for boot ROM
+    first_256_bytes = mem[0x0000:0x0100]
+    mem[0x0000:0x0100] = boot_rom_data
     mem[0xFF44] = 0x90
     count = 0
     running = True
@@ -465,13 +520,19 @@ def main():
         opcode = fetch_opcode(mem, reg)
         running, display_opcode = decode(mem, reg, opcode)
         prefix = "CB " if opcode == 0xCB else ""
-        print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
+
+        # Show debug if count between x-x value
+        if count > 56000: 
+            debug = True
+            print(count)
+        if debug:
+            print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count >= 50000:
+        if count >= 65000:
             running = False
 
-        print(count)
-
+    print(f"Stopped after {count} instructions at PC {reg.pc:04X}")
+    print(f"Registers: {reg}")
 
 if __name__ == "__main__":
     main()
