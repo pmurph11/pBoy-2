@@ -60,6 +60,18 @@ def main():
         mem[base + val] = reg.a
 
     # --- 16-bit Load instructions ---
+    def ld_a_hl_step(mem, reg, step):
+        addr = (reg.h << 8) | reg.l
+        reg.a = mem[addr]
+        addr = (addr + step) & 0xFFFF  # Increment/Decrement
+        reg.h = (addr >> 8) & 0xFF
+        reg.l = addr & 0xFF
+
+
+    def ld_hl_d8(mem, reg):
+        d8 = fetch_byte(mem, reg)
+        hl = (reg.h << 8) | reg.l
+        mem[hl] = d8
 
     def ld_a16_a(mem, reg):
         low = fetch_byte(mem, reg)
@@ -80,6 +92,45 @@ def main():
         # Flags: Z=0, N=0, H=0, C=0
 
     # --- 8-bit Arithmetic/Logic instructions ---
+    def sra_a(reg):
+        reg.a = (reg.a >> 1) | (reg.a & 0x80)  # Preserve the MSB
+        # Clear Z, N, H flags, set
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
+        if reg.a == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+
+    def or_r8_r8(reg, dest_name, src_name):
+        dest_byte = getattr(reg, dest_name)
+        src_byte = getattr(reg, src_name)
+        result = dest_byte | src_byte
+        setattr(reg, dest_name, result)
+
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
+        if result == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+
+    def or_a_c(reg):
+        reg.a |= reg.c
+
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
+        if reg.a == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+
     def dec8(reg, reg_name):
         val = getattr(reg, reg_name)
         low = val & 0x0F
@@ -122,6 +173,10 @@ def main():
         if val > reg.a:
             reg.f |= c_mask
         reg.f |= 0x40  # Set N flag for subtraction
+
+    def cpl(reg):
+        reg.a ^= 0xFF  # Invert all bits in A
+        reg.f |= 0x60  # Set N and H flags, clear Z and C flags
 
     def cp_d8(mem, reg):
         val = fetch_byte(mem, reg)
@@ -223,6 +278,42 @@ def main():
         if half_carry:
             reg.f |= h_mask
 
+    def and_a_r8(reg, reg_name):
+        val = getattr(reg, reg_name)
+        reg.a &= val
+
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
+        if reg.a == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+        reg.f |= h_mask  # Set H flag for AND operation
+
+    def and_a_d8(mem, reg):
+        val = fetch_byte(mem, reg)
+        reg.a &= val
+
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
+        if reg.a == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+        reg.f |= h_mask  # Set H flag for AND operation
+
+    def xor_a_r8(reg, reg_name):
+        reg.a ^= getattr(reg, reg_name)
+        reg.f = 0x00  # Clear all flags
+
+        if reg.a == 0:
+            reg.f |= 0x80  # Set Z flag if result is zero
+        
+    
     def xor_a(reg):
         reg.a ^= reg.a
         reg.f = 0x80  # Set Z flag, clear N, H, C flags
@@ -271,6 +362,20 @@ def main():
             r8 -= 0x100  # Convert to signed
         if reg.f & 0x80 == 0x80:
             reg.pc = (reg.pc + r8) & 0xFFFF  # Jump to new address, wrap around at 16 bits
+
+    def rst(mem, reg, addr):
+        # Push the current PC onto the stack
+        ret_addr = reg.pc
+        high_byte = (ret_addr >> 8) & 0xFF
+        low_byte = ret_addr & 0xFF
+
+        reg.sp = (reg.sp - 1) & 0xFFFF
+        mem[reg.sp] = high_byte
+        reg.sp = (reg.sp - 1) & 0xFFFF
+        mem[reg.sp] = low_byte
+
+        # Jump to the address
+        reg.pc = addr
 
     def call_a16(mem, reg):
         # Fetch the 16-bit address
@@ -325,6 +430,21 @@ def main():
         reg.pc = addr
 
     # --- CB-prefixed instruction handlers ---
+    def swap_r8(reg, reg_name):
+        val = getattr(reg, reg_name)
+        swapped_val = ((val & 0x0F) << 4) | ((val & 0xF0) >> 4)
+        setattr(reg, reg_name, swapped_val)
+
+        # Clear Z, N, H, C flags
+        z_mask = 0x80
+        n_mask = 0x40
+        h_mask = 0x20
+        c_mask = 0x10
+
+        reg.f &= ~(z_mask | n_mask | h_mask | c_mask)  # Clear Z, N, H, C flags
+        if swapped_val == 0:
+            reg.f |= z_mask  # Set Z flag if result is zero
+            
     def rl_r8(reg, reg_name):
         carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C) 0101 0000
         val = getattr(reg, reg_name)
@@ -369,6 +489,31 @@ def main():
             case 0x11:
                 rl_r8(reg, 'c')
                 return True, cb_opcode
+            case 0x2F:
+                sra_a(reg)
+                return True, cb_opcode
+            case 0x30:
+                swap_r8(reg, 'b')
+                return True, cb_opcode
+            case 0x31:
+                swap_r8(reg, 'c')
+                return True, cb_opcode
+            case 0x32:
+                swap_r8(reg, 'd')
+                return True, cb_opcode
+            case 0x33:
+                swap_r8(reg, 'e')
+                return True, cb_opcode
+            case 0x34:
+                swap_r8(reg, 'h')
+                return True, cb_opcode
+            case 0x35:
+                swap_r8(reg, 'l')
+                return True, cb_opcode        
+            case 0x37:
+                # SWAP A
+                swap_r8(reg, 'a')
+                return True, cb_opcode
             case _:
                 print(f"Unknown CB opcode: {cb_opcode:02X} at PC {(reg.pc - 2) & 0xFFFF:04X}")
                 print(f"  Registers: {reg}")
@@ -405,12 +550,16 @@ def main():
         match opcode:
             case 0x00:
                 pass  # NOP
+            case 0x01:
+                ld_r16_d16(mem, reg, 'b', 'c')
             case 0x04:
                 inc8(reg, 'b')
             case 0x05:
                 dec8(reg, 'b')
             case 0x06:
                 ld_r8_d8(mem, reg, 'b')
+            case 0x0B:
+                step_r16(reg, 'b', 'c', -1)
             case 0x0C:
                 inc8(reg, 'c')
             case 0x0D:
@@ -447,24 +596,68 @@ def main():
                 inc8(reg, 'h')
             case 0x28:
                 jr_z_r8(mem, reg)
+            case 0x2A:
+                ld_a_hl_step(mem, reg, 1)
             case 0x2E:
                 ld_r8_d8(mem, reg, 'l')
-            case 0x3D:
-                dec8(reg, 'a')
+            case 0x2F:
+                cpl(reg)
             case 0x31:
                 ld_sp_d16(mem, reg)
             case 0x32:
                 ld_hl_step_a(mem, reg, -1)
+            case 0x36:
+                ld_hl_d8(mem, reg)
+            case 0x3D:
+                dec8(reg, 'a')
             case 0x3E:
-                ld_r8_d8(mem, reg, 'a')
+                ld_r8_d8(mem, reg, 'a')                
             case 0x90:
                 sub_a_b(reg)
             case 0x77:
                 ld_hl_a(mem, reg)
             case 0x86:
                 add_a_hl(mem, reg)
+            case 0xA0:
+                and_a_r8(reg, 'b')
+            case 0xA1:
+                and_a_r8(reg, 'c')
+            case 0xA2:
+                and_a_r8(reg, 'd')
+            case 0xA3:
+                and_a_r8(reg, 'e')
+            case 0xA4:
+                and_a_r8(reg, 'h')
+            case 0xA5:
+                and_a_r8(reg, 'l')
+            case 0xA7:
+                and_a_r8(reg, 'a')
+            case 0xA8:
+                xor_a_r8(reg, 'b')
+            case 0xA9:
+                xor_a_r8(reg, 'c')
+            case 0xAA:
+                xor_a_r8(reg, 'd')
+            case 0xAB:
+                xor_a_r8(reg, 'e')
+            case 0xAC:
+                xor_a_r8(reg, 'h')
+            case 0xAD:
+                xor_a_r8(reg, 'l')
             case 0xAF:
-                xor_a(reg)
+                xor_a_r8(reg, 'a')
+            case 0xB0:
+                or_r8_r8(reg, 'a', 'b')
+            case 0xB1:
+                or_r8_r8(reg, 'a', 'c')
+            case 0xB2:
+                or_r8_r8(reg, 'a', 'd')
+            case 0xB3:
+                or_r8_r8(reg, 'a', 'e')
+            case 0xB4:
+                or_r8_r8(reg, 'a', 'h')
+            case 0xB5:
+                or_r8_r8(reg, 'a', 'l')
             case 0xBE:
                 cp_a_hl(mem, reg)
             case 0xC1:
@@ -473,22 +666,38 @@ def main():
                 jp(mem, reg)
             case 0xC5:
                 push_r16(mem, reg, 'b', 'c')
+            case 0xC7:
+                rst(mem, reg, 0x00)
             case 0xC9:
                 ret(mem, reg)
             case 0xCB:
                 return decode_cb(mem, reg)
             case 0xCD:
                 call_a16(mem, reg)
+            case 0xCF:
+                rst(mem, reg, 0x08)
+            case 0xD7:
+                rst(mem, reg, 0x10)
+            case 0xDF:
+                rst(mem, reg, 0x18)
             case 0xE0:
                 ldh_a8_a(mem, reg)
             case 0xE2:
                 ld_c_a(mem, reg)
+            case 0xE6:
+                and_a_d8(mem, reg)
+            case 0xE7:
+                rst(mem, reg, 0x20)
             case 0xEA:
                 ld_a16_a(mem, reg)
+            case 0xEF:
+                rst(mem, reg, 0x28)
             case 0xF0:
                 ld_a_a8(mem, reg)
             case 0xF3:
                 reg.ime = False
+            case 0xF7:
+                rst(mem, reg, 0x30)
             case 0xFB:
                 # EI — on real hardware interrupts are enabled AFTER the next
                 # instruction executes, not immediately. Harmless until
@@ -496,6 +705,8 @@ def main():
                 reg.ime = True
             case 0xFE:
                 cp_d8(mem, reg)
+            case 0xFF:
+                rst(mem, reg, 0x38)
             case _:
                 print(f"Unknown opcode: {opcode:02X} at PC {(reg.pc - 1) & 0xFFFF:04X}")
                 print(f"  Registers: {reg}")
@@ -511,24 +722,35 @@ def main():
     # Store first 256 bytes of ROM and set aside for boot ROM
     first_256_bytes = mem[0x0000:0x0100]
     mem[0x0000:0x0100] = boot_rom_data
-    mem[0xFF44] = 0x90
     count = 0
     running = True
+    instruction_count = 0
+    ly = 0
+
 
     while running:
+        # Fake scanline counter for LY register, incrementing every 10 instructions
+        instruction_count += 1
+        if instruction_count >= 10:
+            instruction_count = 0
+            ly += 1
+            if ly > 153:
+                ly = 0
+            mem[0xFF44] = ly  # Update LY register
+
         addr = reg.pc
         opcode = fetch_opcode(mem, reg)
         running, display_opcode = decode(mem, reg, opcode)
         prefix = "CB " if opcode == 0xCB else ""
-
+        
         # Show debug if count between x-x value
-        if count > 56000: 
+        if count > 2525000: 
             debug = True
             print(count)
         if debug:
             print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count >= 65000:
+        if count > 5000000:
             running = False
 
     print(f"Stopped after {count} instructions at PC {reg.pc:04X}")
