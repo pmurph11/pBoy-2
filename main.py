@@ -1,9 +1,27 @@
 from cpu import Registers
+from pathlib import Path
+import os
 
 
 def main():
     reg = Registers()
-    boot_rom_path = "roms/dmg_boot.bin"
+    # Locate boot ROM relative to this script to avoid depending on the current working directory or platform paths
+    script_dir = Path(__file__).resolve().parent
+    candidates = [
+        script_dir / "roms" / "dmg_boot.gb",
+        script_dir / "roms" / "dmg_boot.bin",
+        script_dir / "dmg_boot.gb",
+        script_dir / "dmg_boot.bin",
+        Path("roms") / "dmg_boot.gb",
+        Path("roms") / "dmg_boot.bin",
+    ]
+    boot_rom_path = None
+    for p in candidates:
+        if p.exists():
+            boot_rom_path = str(p)
+            break
+    if boot_rom_path is None:
+        raise FileNotFoundError(f"Boot ROM not found. Tried: {', '.join(str(p) for p in candidates)}")
 
     # LD r8 to R8 mapper
     r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
