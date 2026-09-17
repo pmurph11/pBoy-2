@@ -1,5 +1,2 @@
 __pycache__/
 *.pyc
-# Ignore local ROMs so pulling doesn't overwrite local files
-roms/*.gb
-roms/*.bin
