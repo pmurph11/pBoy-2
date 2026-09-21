@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+roms/*
+!roms/dmg_boot.bin
+!roms/dmg0_boot.bin
