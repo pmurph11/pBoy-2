@@ -3,3 +3,5 @@ __pycache__/
 roms/*
 !roms/dmg_boot.bin
 !roms/dmg0_boot.bin
+baseline.txt
+after.txt

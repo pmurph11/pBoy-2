@@ -750,7 +750,7 @@ def main():
         if debug:
             print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count > 5000000:
+        if count > 2600000:
             running = False
 
     print(f"Stopped after {count} instructions at PC {reg.pc:04X}")
