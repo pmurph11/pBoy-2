@@ -12,23 +12,40 @@ class Registers():
         self.sp = 0x0000
 
         self.ime = False
-    # Register pairs
+
+
+    ### Register pairs
     @property
     def bc(self):
         return (self.b << 8) | self.c
-    
-    @property
-    def hl(self):
-        return (self.h << 8) | self.l
+    @bc.setter
+    def bc(self, value):
+        self.b = (value >> 8) & 0xFF
+        self.c = value & 0xFF
     
     @property
     def de(self):
         return (self.d << 8) | self.e
+    @de.setter
+    def de(self, value):
+        self.d = (value >> 8) & 0xFF
+        self.e = value & 0xFF
+
+    @property
+    def hl(self):
+        return (self.h << 8) | self.l
+    @hl.setter
+    def hl(self, value):
+        self.h = (value >> 8) & 0xFF
+        self.l = value & 0xFF
 
     @property
     def af(self):
         return (self.a << 8) | self.f
-
+    @af.setter
+    def af(self, value):
+        self.f = value & 0xF0 
+        self.a = (value >> 8) & 0xFF
 
 
     def __repr__(self):
