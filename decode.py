@@ -15,7 +15,19 @@ for dst_index, dst_name in enumerate(r8_order):
             continue  # Skip (HL) cases and skip 0x76 (HAL) naturally
         opcode = 0x40 + (dst_index << 3) + src_index
         ld_r8_r8_table[opcode] = (dst_name, src_name)
+# Misc 
+def get_operand(mem, reg, index):
+    if index == 6:
+        return mem[reg.hl]
+    else:
+        return getattr(reg, r8_order[index])
 
+def set_operand(mem, reg, index, value):
+    if index == 6:
+        mem[reg.hl] = value
+    else:
+        setattr(reg, r8_order[index], value)
+        
 # --- 8-bit Load instructions ---
 def ld_r8_d8(mem, reg, reg_name):
     r8 = fetch_byte(mem, reg)

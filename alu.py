@@ -93,6 +93,7 @@ def cp_d8(mem, reg):
         reg.f |= C_MASK
 
 def add_a_hl(mem, reg):
+    hl = (reg.h << 8) | reg.l
     val = mem[reg.hl]
     original_a = reg.a
     low_a = reg.a & 0x0F
