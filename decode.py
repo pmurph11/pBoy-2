@@ -28,18 +28,14 @@ def ld_a_r16(mem, reg, high_name, low_name):
     reg.a = mem[addr]
 
 def ld_hl_step_a(mem, reg, step):
-    hl = (reg.h << 8) | reg.l
-    mem[hl] = reg.a
-    hl = (hl + step) & 0xFFFF  # Increment/Decrement HL and wrap around at 16 bits
-    reg.h = (hl >> 8) & 0xFF
-    reg.l = hl & 0xFF
+    mem[reg.hl] = reg.a
+    reg.hl = (reg.hl + step) & 0xFFFF
 
 def ld_r8_r8(reg, dest_name, src_name):
     setattr(reg, dest_name, getattr(reg, src_name))
 
 def ld_hl_a(mem, reg):
-    hl = (reg.h << 8) | reg.l
-    mem[hl] = reg.a
+    mem[reg.hl] = reg.a
 
 def ld_a_a8(mem, reg):
     a8 = fetch_byte(mem, reg)
@@ -56,16 +52,13 @@ def ld_c_a(mem, reg):
 
 # --- 16-bit Load instructions ---
 def ld_a_hl_step(mem, reg, step):
-    addr = (reg.h << 8) | reg.l
-    reg.a = mem[addr]
-    addr = (addr + step) & 0xFFFF  # Increment/Decrement
-    reg.h = (addr >> 8) & 0xFF
-    reg.l = addr & 0xFF
+    reg.a = mem[reg.hl]
+    reg.hl = (reg.hl + step) & 0xFFFF
+
 
 def ld_hl_d8(mem, reg):
     d8 = fetch_byte(mem, reg)
-    hl = (reg.h << 8) | reg.l
-    mem[hl] = d8
+    mem[reg.hl] = d8
 
 def ld_a16_a(mem, reg):
     low = fetch_byte(mem, reg)
