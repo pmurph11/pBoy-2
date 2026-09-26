@@ -49,8 +49,7 @@ def dec8(reg, reg_name):
     reg.f |= N_MASK  # Set N flag for decrement operation
 
 def cp_a_hl(mem, reg):
-    hl = (reg.h << 8) | reg.l
-    val = mem[hl]
+    val = mem[reg.hl]
     low_a = reg.a & 0x0F
     low_val = val & 0x0F
 
@@ -94,8 +93,7 @@ def cp_d8(mem, reg):
         reg.f |= C_MASK
 
 def add_a_hl(mem, reg):
-    hl = (reg.h << 8) | reg.l
-    val = mem[hl]
+    val = mem[reg.hl]
     original_a = reg.a
     low_a = reg.a & 0x0F
     low_val = val & 0x0F
