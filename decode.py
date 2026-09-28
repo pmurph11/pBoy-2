@@ -234,6 +234,8 @@ def decode(mem, reg, opcode):
             pass  # NOP
         case 0x01:
             ld_r16_d16(mem, reg, 'b', 'c')
+        case 0x03:
+            step_r16(reg, 'b', 'c', 1)
         case 0x04:
             inc8(reg, 'b')
         case 0x05:
@@ -252,6 +254,8 @@ def decode(mem, reg, opcode):
             ld_r16_d16(mem, reg, 'd', 'e')
         case 0x13:
             step_r16(reg, 'd', 'e', 1)
+        case 0x14:
+            inc8(reg, 'd')
         case 0x15:
             dec8(reg, 'd')
         case 0x16:
@@ -262,6 +266,10 @@ def decode(mem, reg, opcode):
             jr_r8(mem, reg)
         case 0x1A:
             ld_a_r16(mem, reg, 'd', 'e')
+        case 0x1B:
+            step_r16(reg, 'd', 'e', -1)
+        case 0x1C:
+            inc8(reg, 'e')
         case 0x1D:
             dec8(reg, 'e')
         case 0x1E:
@@ -276,10 +284,20 @@ def decode(mem, reg, opcode):
             step_r16(reg, 'h', 'l', 1)
         case 0x24:
             inc8(reg, 'h')
+        case 0x25:
+            dec8(reg, 'h')
+        case 0x26:
+            ld_r8_d8(mem, reg, 'h')
         case 0x28:
             jr_z_r8(mem, reg)
         case 0x2A:
             ld_a_hl_step(mem, reg, 1)
+        case 0x2B:
+            step_r16(reg, 'h', 'l', -1)
+        case 0x2C:
+            inc8(reg, 'l')
+        case 0x2D:
+            dec8(reg, 'l')
         case 0x2E:
             ld_r8_d8(mem, reg, 'l')
         case 0x2F:
@@ -290,6 +308,8 @@ def decode(mem, reg, opcode):
             ld_hl_step_a(mem, reg, -1)
         case 0x36:
             ld_hl_d8(mem, reg)
+        case 0x3C:
+            inc8(reg, 'a')
         case 0x3D:
             dec8(reg, 'a')
         case 0x3E:
@@ -314,18 +334,28 @@ def decode(mem, reg, opcode):
             call_a16(mem, reg)
         case 0xCF:
             rst(mem, reg, 0x08)
+        case 0xD1:
+            pop_r16(mem, reg, 'd', 'e')
+        case 0xD5:
+            push_r16(mem, reg, 'd', 'e')
         case 0xD7:
             rst(mem, reg, 0x10)
         case 0xDF:
             rst(mem, reg, 0x18)
         case 0xE0:
             ldh_a8_a(mem, reg)
+        case 0xE1:
+            pop_r16(mem, reg, 'h', 'l')
         case 0xE2:
             ld_c_a(mem, reg)
+        case 0xE5:
+            push_r16(mem, reg, 'h', 'l')
         case 0xE6:
             and_a_d8(mem, reg)
         case 0xE7:
             rst(mem, reg, 0x20)
+        case 0xE9:
+            jp(mem, reg)
         case 0xEA:
             ld_a16_a(mem, reg)
         case 0xEF:
@@ -334,6 +364,8 @@ def decode(mem, reg, opcode):
             ld_a_a8(mem, reg)
         case 0xF3:
             reg.ime = False
+        case 0xF5:
+            push_r16(mem, reg, 'a', 'f')
         case 0xF7:
             rst(mem, reg, 0x30)
         case 0xFB:
