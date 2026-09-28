@@ -246,3 +246,14 @@ def bit_7_h(reg):
         reg.f &= ~Z_MASK
     else:
         reg.f |= Z_MASK
+
+ALU_OPS = [
+    alu_add,
+    alu_adc,
+    alu_sub,
+    alu_sbc,
+    alu_and,
+    alu_xor,
+    alu_or,
+    alu_cp
+]
