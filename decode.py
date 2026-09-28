@@ -1,20 +1,10 @@
 from mem import fetch_byte
-from alu import (
-    inc8, dec8, cp_a_hl, cpl, cp_d8, add_a_hl, sub_a_b,
-    and_a_r8, and_a_d8, xor_a_r8, or_r8_r8, step_r16, rla, rl_r8,
+from alu import (ALU_OPS, inc8, dec8, cpl, cp_d8, and_a_d8, step_r16, rla, rl_r8,
     sra_a, swap_r8, bit_7_h,
 )
 
-# LD r8 to R8 mapper
 r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
 
-ld_r8_r8_table = {}
-for dst_index, dst_name in enumerate(r8_order):
-    for src_index, src_name in enumerate(r8_order):
-        if dst_name is None or src_name is None:
-            continue  # Skip (HL) cases and skip 0x76 (HAL) naturally
-        opcode = 0x40 + (dst_index << 3) + src_index
-        ld_r8_r8_table[opcode] = (dst_name, src_name)
 # Misc 
 def get_operand(mem, reg, index):
     if index == 6:
@@ -27,6 +17,15 @@ def set_operand(mem, reg, index, value):
         mem[reg.hl] = value
     else:
         setattr(reg, r8_order[index], value)
+
+
+ld_r8_r8_table = {}
+for dst_index, dst_name in enumerate(r8_order):
+    for src_index, src_name in enumerate(r8_order):
+        if dst_name is None or src_name is None:
+            continue  # Skip (HL) cases and skip 0x76 (HAL) naturally
+        opcode = 0x40 + (dst_index << 3) + src_index
+        ld_r8_r8_table[opcode] = (dst_name, src_name)
         
 # --- 8-bit Load instructions ---
 def ld_r8_d8(mem, reg, reg_name):
@@ -224,6 +223,14 @@ def decode(mem, reg, opcode):
         ld_r8_r8(reg, dst, src)
         return True, opcode
 
+    # ALU table
+    if 0x80 <= opcode <= 0xBF:
+        operation_index = (opcode >> 3) & 0x07
+        operand_index = opcode & 0x07
+        val = get_operand(mem, reg, operand_index)
+        ALU_OPS[operation_index](reg, val)
+        return True, opcode
+    
     match opcode:
         case 0x00:
             pass  # NOP
@@ -289,54 +296,8 @@ def decode(mem, reg, opcode):
             dec8(reg, 'a')
         case 0x3E:
             ld_r8_d8(mem, reg, 'a')                
-        case 0x90:
-            sub_a_b(reg)
         case 0x77:
             ld_hl_a(mem, reg)
-        case 0x86:
-            add_a_hl(mem, reg)
-        case 0xA0:
-            and_a_r8(reg, 'b')
-        case 0xA1:
-            and_a_r8(reg, 'c')
-        case 0xA2:
-            and_a_r8(reg, 'd')
-        case 0xA3:
-            and_a_r8(reg, 'e')
-        case 0xA4:
-            and_a_r8(reg, 'h')
-        case 0xA5:
-            and_a_r8(reg, 'l')
-        case 0xA7:
-            and_a_r8(reg, 'a')
-        case 0xA8:
-            xor_a_r8(reg, 'b')
-        case 0xA9:
-            xor_a_r8(reg, 'c')
-        case 0xAA:
-            xor_a_r8(reg, 'd')
-        case 0xAB:
-            xor_a_r8(reg, 'e')
-        case 0xAC:
-            xor_a_r8(reg, 'h')
-        case 0xAD:
-            xor_a_r8(reg, 'l')
-        case 0xAF:
-            xor_a_r8(reg, 'a')
-        case 0xB0:
-            or_r8_r8(reg, 'a', 'b')
-        case 0xB1:
-            or_r8_r8(reg, 'a', 'c')
-        case 0xB2:
-            or_r8_r8(reg, 'a', 'd')
-        case 0xB3:
-            or_r8_r8(reg, 'a', 'e')
-        case 0xB4:
-            or_r8_r8(reg, 'a', 'h')
-        case 0xB5:
-            or_r8_r8(reg, 'a', 'l')
-        case 0xBE:
-            cp_a_hl(mem, reg)
         case 0xC1:
             pop_r16(mem, reg, 'b', 'c')
         case 0xC3:

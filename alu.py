@@ -14,19 +14,8 @@ def sra_a(reg):
     if reg.a == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
 
-def or_r8_r8(reg, dest_name, src_name):
-    dest_byte = getattr(reg, dest_name)
-    src_byte = getattr(reg, src_name)
-    result = dest_byte | src_byte
-    setattr(reg, dest_name, result)
-
-    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
-    if result == 0:
-        reg.f |= Z_MASK  # Set Z flag if result is zero
-
-def or_a_c(reg):
-    reg.a |= reg.c
-
+def alu_or(reg, val):
+    reg.a |= val
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
     if reg.a == 0:
@@ -48,19 +37,15 @@ def dec8(reg, reg_name):
         reg.f |= H_MASK
     reg.f |= N_MASK  # Set N flag for decrement operation
 
-def cp_a_hl(mem, reg):
-    val = mem[reg.hl]
+def alu_cp(reg, val):
     low_a = reg.a & 0x0F
     low_val = val & 0x0F
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)
     if val == reg.a:
         reg.f |= Z_MASK  # Set Z flag if result is zero
-    else:
-        reg.f &= ~Z_MASK  # Clear Z flag if result is not zero
     if low_a < low_val:
         reg.f |= H_MASK  # Set H flag for half borrow
-    # If B > A set C
     if val > reg.a:
         reg.f |= C_MASK
     reg.f |= N_MASK  # Set N flag for subtraction
@@ -92,9 +77,7 @@ def cp_d8(mem, reg):
     if full_borrow:
         reg.f |= C_MASK
 
-def add_a_hl(mem, reg):
-    hl = (reg.h << 8) | reg.l
-    val = mem[reg.hl]
+def alu_add(reg, val):
     original_a = reg.a
     low_a = reg.a & 0x0F
     low_val = val & 0x0F
@@ -108,19 +91,52 @@ def add_a_hl(mem, reg):
         reg.f |= Z_MASK  # Set Z flag if result is zero
     if low_a + low_val > 0x0F:
         reg.f |= H_MASK  # Set H flag for half carry
-    # If B > A set C
     if original_a + val > 0xFF:
         reg.f |= C_MASK
 
-def sub_a_b(reg):
-    # subtract b from a
-    val = reg.b
+def alu_adc(reg, val):
     original_a = reg.a
-    # get both nibbles
+    low_a = reg.a & 0x0F
+    low_val = val & 0x0F
+    carry = (reg.f & C_MASK) >> 4
+
+    result = (reg.a + val + carry) & 0xFF
+    reg.a = result
+
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
+
+    if result == 0:
+        reg.f |= Z_MASK  # Set Z flag if result is zero
+    if low_a + low_val + carry > 0x0F:
+        reg.f |= H_MASK  # Set H flag for half carry
+    if original_a + val + carry > 0xFF:
+        reg.f |= C_MASK
+
+def alu_sub(reg, val):
+    original_a = reg.a
     low_a = reg.a & 0x0F
     low_val = val & 0x0F
 
     result = (reg.a - val) & 0xFF
+    reg.a = result
+
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)
+
+    if result == 0:
+        reg.f |= Z_MASK  
+    reg.f |= N_MASK  # Set N flag for subtraction
+    if low_a < low_val:
+        reg.f |= H_MASK  # Set H flag for half borrow
+    if original_a < val:
+        reg.f |= C_MASK
+
+def alu_sbc(reg, val):
+    original_a = reg.a
+    low_a = reg.a & 0x0F
+    low_val = val & 0x0F
+    carry = (reg.f & C_MASK) >> 4
+
+    result = (reg.a - val - carry) & 0xFF
     reg.a = result
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
@@ -128,11 +144,10 @@ def sub_a_b(reg):
     if result == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
     reg.f |= N_MASK  # Set N flag for subtraction
-    if low_a < low_val:
+    if low_a < low_val + carry:
         reg.f |= H_MASK  # Set H flag for half borrow
-    # If B > A set C
-    if original_a < val:
-        reg.f |= C_MASK
+    if original_a < val + carry:
+        reg.f |= C_MASK  # Set C flag for full borrow
 
 def inc8(reg, reg_name):
     val = getattr(reg, reg_name)
@@ -147,8 +162,7 @@ def inc8(reg, reg_name):
     if half_carry:
         reg.f |= H_MASK
 
-def and_a_r8(reg, reg_name):
-    val = getattr(reg, reg_name)
+def alu_and(reg, val):
     reg.a &= val
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
@@ -165,16 +179,16 @@ def and_a_d8(mem, reg):
         reg.f |= Z_MASK  # Set Z flag if result is zero
     reg.f |= H_MASK  # Set H flag for AND operation
 
-def xor_a_r8(reg, reg_name):
-    reg.a ^= getattr(reg, reg_name)
-    reg.f = 0x00  # Clear all flags
+def alu_xor(reg, val):
+    reg.a ^= val
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear all flags
 
     if reg.a == 0:
-        reg.f |= 0x80  # Set Z flag if result is zero
+        reg.f |= Z_MASK  # Set Z flag if result is zero
 
 def xor_a(reg):
     reg.a ^= reg.a
-    reg.f = 0x80  # Set Z flag, clear N, H, C flags
+    reg.f = Z_MASK  # Set Z flag, clear N, H, C flags
 
 # --- 16-bit Arithmetic/Logic instructions ---
 def step_r16(reg, high_name, low_name, step):
