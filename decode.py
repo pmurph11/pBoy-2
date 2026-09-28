@@ -20,12 +20,12 @@ def set_operand(mem, reg, index, value):
 
 
 ld_r8_r8_table = {}
-for dst_index, dst_name in enumerate(r8_order):
-    for src_index, src_name in enumerate(r8_order):
-        if dst_name is None or src_name is None:
-            continue  # Skip (HL) cases and skip 0x76 (HAL) naturally
+for dst_index in range(len(r8_order)):
+    for src_index in range(len(r8_order)):
         opcode = 0x40 + (dst_index << 3) + src_index
-        ld_r8_r8_table[opcode] = (dst_name, src_name)
+        if opcode == 0x76:  # HALT instruction, not a valid LD instruction
+            continue
+        ld_r8_r8_table[opcode] = (dst_index, src_index)
         
 # --- 8-bit Load instructions ---
 def ld_r8_d8(mem, reg, reg_name):
@@ -41,9 +41,6 @@ def ld_a_r16(mem, reg, high_name, low_name):
 def ld_hl_step_a(mem, reg, step):
     mem[reg.hl] = reg.a
     reg.hl = (reg.hl + step) & 0xFFFF
-
-def ld_r8_r8(reg, dest_name, src_name):
-    setattr(reg, dest_name, getattr(reg, src_name))
 
 def ld_hl_a(mem, reg):
     mem[reg.hl] = reg.a
@@ -220,7 +217,8 @@ def decode_cb(mem, reg):
 def decode(mem, reg, opcode):
     if opcode in ld_r8_r8_table:
         dst, src = ld_r8_r8_table[opcode]
-        ld_r8_r8(reg, dst, src)
+        value = get_operand(mem, reg, src)
+        set_operand(mem, reg, dst, value)
         return True, opcode
 
     # ALU table
@@ -295,7 +293,9 @@ def decode(mem, reg, opcode):
         case 0x3D:
             dec8(reg, 'a')
         case 0x3E:
-            ld_r8_d8(mem, reg, 'a')                
+            ld_r8_d8(mem, reg, 'a')   
+        case 0x76:
+            pass  # HALT instruction, do nothing for now            
         case 0x77:
             ld_hl_a(mem, reg)
         case 0xC1:
