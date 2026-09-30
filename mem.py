@@ -11,6 +11,11 @@ def fetch_byte(mem, reg):
     reg.pc += 1
     return byte
 
+def write_byte(mem, addr, val):
+    mem[addr] = val
+    if debug:
+        print(f"    write_byte @ {addr:04X} <- {val:02X}")
+
 def fetch_opcode(mem, reg):
     return fetch_byte(mem, reg)
 

@@ -1,4 +1,4 @@
-from mem import fetch_byte
+from mem import fetch_byte, write_byte
 from alu import (ALU_OPS, inc8, dec8, cpl, cp_d8, and_a_d8, step_r16, rla, rl_r8,
     sra_a, swap_r8, bit_7_h,
 )
@@ -14,7 +14,7 @@ def get_operand(mem, reg, index):
 
 def set_operand(mem, reg, index, value):
     if index == 6:
-        mem[reg.hl] = value
+        write_byte(mem, reg.hl, value)
     else:
         setattr(reg, r8_order[index], value)
 
@@ -39,11 +39,11 @@ def ld_a_r16(mem, reg, high_name, low_name):
     reg.a = mem[addr]
 
 def ld_hl_step_a(mem, reg, step):
-    mem[reg.hl] = reg.a
+    write_byte(mem, reg.hl, reg.a)
     reg.hl = (reg.hl + step) & 0xFFFF
 
 def ld_hl_a(mem, reg):
-    mem[reg.hl] = reg.a
+    write_byte(mem, reg.hl, reg.a)
 
 def ld_a_a8(mem, reg):
     a8 = fetch_byte(mem, reg)
@@ -51,12 +51,12 @@ def ld_a_a8(mem, reg):
 
 def ldh_a8_a(mem, reg):
     a8 = fetch_byte(mem, reg)
-    mem[0xFF00 + a8] = reg.a
+    write_byte(mem, 0xFF00 + a8, reg.a)
 
 def ld_c_a(mem, reg):
     base = 0xFF00
     val = reg.c
-    mem[base + val] = reg.a
+    write_byte(mem, base + val, reg.a)
 
 # --- 16-bit Load instructions ---
 def ld_a_hl_step(mem, reg, step):
@@ -66,13 +66,13 @@ def ld_a_hl_step(mem, reg, step):
 
 def ld_hl_d8(mem, reg):
     d8 = fetch_byte(mem, reg)
-    mem[reg.hl] = d8
+    write_byte(mem, reg.hl, d8)
 
 def ld_a16_a(mem, reg):
     low = fetch_byte(mem, reg)
     high = fetch_byte(mem, reg)
     addr = high << 8 | low
-    mem[addr] = reg.a
+    write_byte(mem, addr, reg.a)
 
 def ld_r16_d16(mem, reg, high_name, low_name):
     low = fetch_byte(mem, reg)
@@ -114,9 +114,9 @@ def rst(mem, reg, addr):
     low_byte = ret_addr & 0xFF
 
     reg.sp = (reg.sp - 1) & 0xFFFF
-    mem[reg.sp] = high_byte
+    write_byte(mem, reg.sp, high_byte)
     reg.sp = (reg.sp - 1) & 0xFFFF
-    mem[reg.sp] = low_byte
+    write_byte(mem, reg.sp, low_byte)
 
     # Jump to the address
     reg.pc = addr
@@ -133,9 +133,9 @@ def call_a16(mem, reg):
     low_byte = ret_addr & 0xFF
 
     reg.sp = (reg.sp - 1) & 0xFFFF
-    mem[reg.sp] = high_byte
+    write_byte(mem, reg.sp, high_byte)
     reg.sp = (reg.sp - 1) & 0xFFFF
-    mem[reg.sp] = low_byte
+    write_byte(mem, reg.sp, low_byte)
 
     # Jump to the address
     reg.pc = addr
@@ -160,10 +160,10 @@ def push_r16(mem, reg, high_name, low_name):
     high = getattr(reg, high_name)
 
     reg.sp = (reg.sp - 1) & 0xFFFF
-    mem[reg.sp] = high
+    write_byte(mem, reg.sp, high)
 
     reg.sp = (reg.sp - 1) & 0xFFFF
-    mem[reg.sp] = low
+    write_byte(mem, reg.sp, low)
 
 def ret(mem, reg):
     low = mem[reg.sp]
@@ -355,7 +355,7 @@ def decode(mem, reg, opcode):
         case 0xE7:
             rst(mem, reg, 0x20)
         case 0xE9:
-            jp(mem, reg)
+            reg.pc = reg.hl
         case 0xEA:
             ld_a16_a(mem, reg)
         case 0xEF:
