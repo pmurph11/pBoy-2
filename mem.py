@@ -13,6 +13,14 @@ def fetch_byte(mem, reg):
 
 def write_byte(mem, addr, val):
     mem[addr] = val
+
+    # Blargg's test ROMs report their results over the serial port.
+    # Writing a value with bit 7 set to serial control (0xFF02) means
+    # "send the byte currently in serial buffer (0xFF01)".
+    if addr == 0xFF02 and (val & 0x80):
+        print(chr(mem[0xFF01]), end='', flush=True)
+        mem[0xFF02] = val & 0x7F   # clear bit 7 = transfer finished
+
     if debug:
         print(f"    write_byte @ {addr:04X} <- {val:02X}")
 

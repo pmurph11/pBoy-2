@@ -9,7 +9,7 @@ def main():
 
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/Tetris.gb"
+    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/06-ld r,r.gb"
 
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
@@ -41,13 +41,13 @@ def main():
         prefix = "CB " if opcode == 0xCB else ""
 
         # Show debug if count between x-x value
-        if count > 2525000:
-            debug = True
-            print(count)
+        # if count > 2525000:
+        #     debug = True
+        #     print(count)
         if debug:
             print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count > 2600000:
+        if count > 50000000:
             running = False
 
     print(f"Stopped after {count} instructions at PC {reg.pc:04X}")
