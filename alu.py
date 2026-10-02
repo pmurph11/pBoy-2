@@ -11,6 +11,7 @@ def sra_a(reg):
     reg.a = (reg.a >> 1) | (reg.a & 0x80)  # Preserve the MSB
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
+
     if reg.a == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
 
@@ -18,6 +19,7 @@ def alu_or(reg, val):
     reg.a |= val
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
+
     if reg.a == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
 
@@ -53,29 +55,6 @@ def alu_cp(reg, val):
 def cpl(reg):
     reg.a ^= 0xFF  # Invert all bits in A
     reg.f |= 0x60  # Set N and H flags, clear Z and C flags
-
-def cp_d8(mem, reg):
-    val = fetch_byte(mem, reg)
-    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)
-
-    if reg.a == val:
-        reg.f |= Z_MASK
-
-    # SET N REGARDLESS
-    reg.f |= N_MASK
-
-    # Half and full borrow
-
-    low_a = reg.a & 0x0F
-    low_val = val & 0x0F
-    half_borrow = low_a < low_val
-
-    if half_borrow :
-        reg.f |= H_MASK
-
-    full_borrow = reg.a < val
-    if full_borrow:
-        reg.f |= C_MASK
 
 def alu_add(reg, val):
     original_a = reg.a
@@ -157,6 +136,7 @@ def inc8(reg, reg_name):
     setattr(reg, reg_name, inc_val)
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # clear only Z, N, H — leave C alone
+
     if inc_val == 0:
         reg.f |= Z_MASK
     if half_carry:
@@ -166,15 +146,7 @@ def alu_and(reg, val):
     reg.a &= val
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
-    if reg.a == 0:
-        reg.f |= Z_MASK  # Set Z flag if result is zero
-    reg.f |= H_MASK  # Set H flag for AND operation
 
-def and_a_d8(mem, reg):
-    val = fetch_byte(mem, reg)
-    reg.a &= val
-
-    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
     if reg.a == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
     reg.f |= H_MASK  # Set H flag for AND operation
@@ -207,6 +179,7 @@ def rla(reg):
     new_carry = (reg.a & 0x80) >> 7
     reg.a = ((reg.a << 1) | carry) & 0xFF  # Shift left and add old carry
     reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # Clear Z, N, H flags
+
     if new_carry:
         reg.f |= C_MASK  # Set C flag if new carry is 1
 
@@ -216,6 +189,7 @@ def rl_r8(reg, reg_name):
     new_carry = (val & 0x80) >> 7
     val = ((val << 1) | carry) & 0xFF
     setattr(reg, reg_name, val)
+
     reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # Clear Z, N, H flags
     if val == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
@@ -227,8 +201,6 @@ def swap_r8(reg, reg_name):
     val = getattr(reg, reg_name)
     swapped_val = ((val & 0x0F) << 4) | ((val & 0xF0) >> 4)
     setattr(reg, reg_name, swapped_val)
-
-
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
     if swapped_val == 0:

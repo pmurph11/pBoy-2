@@ -1,5 +1,5 @@
 from mem import fetch_byte, write_byte
-from alu import (ALU_OPS, inc8, dec8, cpl, cp_d8, and_a_d8, step_r16, rla, rl_r8,
+from alu import (ALU_OPS, inc8, dec8, cpl, step_r16, rla, rl_r8,
     sra_a, swap_r8, bit_7_h,
 )
 
@@ -228,6 +228,12 @@ def decode(mem, reg, opcode):
         val = get_operand(mem, reg, operand_index)
         ALU_OPS[operation_index](reg, val)
         return True, opcode
+    # ALU Immediate table
+    if (opcode & 0xC7) == 0xC6:
+        operation_index = (opcode >> 3) & 0x07
+        val = fetch_byte(mem, reg)
+        ALU_OPS[operation_index](reg, val)
+        return True, opcode
     
     match opcode:
         case 0x00:
@@ -350,8 +356,6 @@ def decode(mem, reg, opcode):
             ld_c_a(mem, reg)
         case 0xE5:
             push_r16(mem, reg, 'h', 'l')
-        case 0xE6:
-            and_a_d8(mem, reg)
         case 0xE7:
             rst(mem, reg, 0x20)
         case 0xE9:
@@ -373,8 +377,6 @@ def decode(mem, reg, opcode):
             # instruction executes, not immediately. Harmless until
             # interrupt dispatch exists; revisit then.
             reg.ime = True
-        case 0xFE:
-            cp_d8(mem, reg)
         case 0xFF:
             rst(mem, reg, 0x38)
         case _:
