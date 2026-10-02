@@ -4,11 +4,9 @@ H_MASK = 0x20
 C_MASK = 0x10
 
 
-from mem import fetch_byte
-
 # --- 8-bit Arithmetic/Logic instructions ---
 def sra_a(reg):
-    reg.a = (reg.a >> 1) | (reg.a & 0x80)  # Preserve the MSB
+    reg.a = (reg.a >> 1) | (reg.a & Z_MASK)  # Preserve the MSB
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
 
@@ -176,7 +174,7 @@ def step_r16(reg, high_name, low_name, step):
 # --- Rotate/Shift instructions ---
 def rla(reg):
     carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C)
-    new_carry = (reg.a & 0x80) >> 7
+    new_carry = (reg.a & Z_MASK) >> 7
     reg.a = ((reg.a << 1) | carry) & 0xFF  # Shift left and add old carry
     reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # Clear Z, N, H flags
 
@@ -186,7 +184,7 @@ def rla(reg):
 def rl_r8(reg, reg_name):
     carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C) 0101 0000
     val = getattr(reg, reg_name)
-    new_carry = (val & 0x80) >> 7
+    new_carry = (val & Z_MASK) >> 7
     val = ((val << 1) | carry) & 0xFF
     setattr(reg, reg_name, val)
 
