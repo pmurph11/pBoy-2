@@ -1,3 +1,6 @@
+from mem import write_byte
+
+
 Z_MASK = 0x80
 N_MASK = 0x40
 H_MASK = 0x20
@@ -20,7 +23,10 @@ def alu_or(reg, val):
 
     if reg.a == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
-
+def dec_hl(reg, mem):
+    # CONTINUE HERE. UNFINISHED
+    pass
+    
 def dec8(reg, reg_name):
     val = getattr(reg, reg_name)
     low = val & 0x0F
@@ -180,6 +186,12 @@ def rla(reg):
 
     if new_carry:
         reg.f |= C_MASK  # Set C flag if new carry is 1
+
+def rra(reg):
+    carry = (reg.f & C_MASK) >> 4  # Get the current carry flag (C
+    new_carry = reg.a & 0x01
+    reg.a = ((carry << 7) | (reg.a >> 1)) & 0xFF  # Shift right and add old carry
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # Clear Z, N, H flags
 
 def rl_r8(reg, reg_name):
     carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C) 0101 0000

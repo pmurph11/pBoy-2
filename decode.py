@@ -6,6 +6,10 @@ from alu import (ALU_OPS, inc8, dec8, cpl, step_r16, rla, rl_r8,
 r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
 
 # Misc 
+def ld_r16_a(mem, reg, pair_name):
+    # Store A at pairs address
+    write_byte(mem, getattr(reg, pair_name), reg.a)
+
 def get_operand(mem, reg, index):
     if index == 6:
         return mem[reg.hl]
@@ -97,25 +101,11 @@ def check_condition(reg, flag_number):
         return (reg.f & C_MASK) != 0  # C flag set
     
 # --- 8-bit Jump/Call instructions ---
-def jr_nz_r8(mem, reg):
-    r8 = fetch_byte(mem, reg)
-    if r8 >= 0x80:
-        r8 -= 0x100  # Convert to signed
-    if reg.f & 0x80 == 0:
-        reg.pc = (reg.pc + r8) & 0xFFFF  # Jump to new address, wrap around at 16 bits
-
 def jr_r8(mem, reg):
     r8 = fetch_byte(mem, reg)
     if r8 >= 0x80:
         r8 -= 0x100  # Convert to signed
     reg.pc = (reg.pc + r8) & 0xFFFF
-
-def jr_z_r8(mem, reg):
-    r8 = fetch_byte(mem, reg)
-    if r8 >= 0x80:
-        r8 -= 0x100  # Convert to signed
-    if reg.f & 0x80 == 0x80:
-        reg.pc = (reg.pc + r8) & 0xFFFF  # Jump to new address, wrap around at 16 bits
 
 def rst(mem, reg, addr):
     # Push the current PC onto the stack
@@ -253,7 +243,7 @@ def decode(mem, reg, opcode):
         return True, opcode
     if (opcode & 0xE7) == 0x20:
         val = fetch_byte(mem, reg)
-        if val >= Z_MASK:
+        if val >= 0x80:
             val -= 0x100  # Convert to signed
         if check_condition(reg, (opcode >> 3) & 0x03):
             reg.pc = (reg.pc + val) & 0xFFFF  # Jump to new address, wrap around at 16 bits
@@ -261,10 +251,10 @@ def decode(mem, reg, opcode):
     
     if (opcode & 0xE7) == 0xC0:
         if check_condition(reg, (opcode >> 3) & 0x03):
-            low = fetch_byte(mem, reg)
-            reg.sp = (reg.sp - 1) & 0xFFFF
-            high = fetch_byte(mem, reg)
-            reg.sp = (reg.sp - 1) & 0xFFFF
+            low = mem[reg.sp]
+            reg.sp = (reg.sp + 1) & 0xFFFF
+            high = mem[reg.sp]
+            reg.sp = (reg.sp + 1) & 0xFFFF
             reg.pc = (high << 8) | low
         return True, opcode
 
@@ -290,6 +280,8 @@ def decode(mem, reg, opcode):
             pass  # NOP
         case 0x01:
             ld_r16_d16(mem, reg, 'b', 'c')
+        case 0x02:
+            ld_r16_a(mem, reg, 'bc')
         case 0x03:
             step_r16(reg, 'b', 'c', 1)
         case 0x04:
@@ -308,6 +300,8 @@ def decode(mem, reg, opcode):
             ld_r8_d8(mem, reg, 'c')
         case 0x11:
             ld_r16_d16(mem, reg, 'd', 'e')
+        case 0x12:
+            ld_r16_a(mem, reg, 'de')
         case 0x13:
             step_r16(reg, 'd', 'e', 1)
         case 0x14:
