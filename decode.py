@@ -1,5 +1,5 @@
 from mem import fetch_byte, write_byte
-from alu import (ALU_OPS, inc8, dec8, cpl, step_r16, rla, rl_r8,
+from alu import (ALU_OPS, inc8, dec8, cpl, step_r16, rla, rra, rl_r8,
     sra_a, swap_r8, bit_7_h, Z_MASK, N_MASK, H_MASK, C_MASK)   
 
 
@@ -324,6 +324,8 @@ def decode(mem, reg, opcode):
             dec8(reg, 'e')
         case 0x1E:
             ld_r8_d8(mem, reg, 'e')
+        case 0x1F:
+            rra(reg)
         case 0x21:
             ld_r16_d16(mem, reg, 'h', 'l')
         case 0x22:
