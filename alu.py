@@ -182,7 +182,7 @@ def rla(reg):
     carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C)
     new_carry = (reg.a & Z_MASK) >> 7
     reg.a = ((reg.a << 1) | carry) & 0xFF  # Shift left and add old carry
-    reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # Clear Z, N, H flags
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
 
     if new_carry:
         reg.f |= C_MASK  # Set C flag if new carry is 1
@@ -191,7 +191,10 @@ def rra(reg):
     carry = (reg.f & C_MASK) >> 4  # Get the current carry flag (C
     new_carry = reg.a & 0x01
     reg.a = ((carry << 7) | (reg.a >> 1)) & 0xFF  # Shift right and add old carry
-    reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # Clear Z, N, H flags
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
+
+    if new_carry:
+        reg.f |= C_MASK  # Set C flag if new carry is 1
 
 def rl_r8(reg, reg_name):
     carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C) 0101 0000
@@ -200,7 +203,7 @@ def rl_r8(reg, reg_name):
     val = ((val << 1) | carry) & 0xFF
     setattr(reg, reg_name, val)
 
-    reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # Clear Z, N, H flags
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
     if val == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
     if new_carry:
