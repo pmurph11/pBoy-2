@@ -60,6 +60,24 @@ def cpl(reg):
     reg.a ^= 0xFF  # Invert all bits in A
     reg.f |= 0x60  # Set N and H flags, clear Z and C flags
 
+def add_hl_r16(reg, val):
+    hl = (reg.h << 8) | reg.l
+    original_hl = hl
+    low_hl = hl & 0x0FFF
+    low_val = val & 0x0FFF
+
+    hl = (hl + val) & 0xFFFF
+
+    reg.h = (hl >> 8) & 0xFF
+    reg.l = hl & 0xFF
+
+    reg.f &= ~(N_MASK | H_MASK | C_MASK)
+
+    if low_hl + low_val > 0x0FFF:
+        reg.f |= H_MASK  # Set H flag for half carry
+    if original_hl + val > 0xFFFF:
+        reg.f |= C_MASK  # Set C flag for carry
+
 def alu_add(reg, val):
     original_a = reg.a
     low_a = reg.a & 0x0F
@@ -241,4 +259,11 @@ ALU_OPS = [
     alu_xor,
     alu_or,
     alu_cp
+]
+
+ADD_16 = [
+    'bc',
+    'de',
+    'hl',
+    'sp'
 ]

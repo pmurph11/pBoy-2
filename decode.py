@@ -1,5 +1,5 @@
 from mem import fetch_byte, write_byte
-from alu import (ALU_OPS, inc8, dec8, cpl, step_r16, rla, rra, rl_r8,
+from alu import (ADD_16, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rla, rra, rl_r8,
     sra_a, swap_r8, bit_7_h, Z_MASK, N_MASK, H_MASK, C_MASK)   
 
 
@@ -235,12 +235,22 @@ def decode(mem, reg, opcode):
         val = get_operand(mem, reg, operand_index)
         ALU_OPS[operation_index](reg, val)
         return True, opcode
+    
     # ALU Immediate table
     if (opcode & 0xC7) == 0xC6:
         operation_index = (opcode >> 3) & 0x07
         val = fetch_byte(mem, reg)
         ALU_OPS[operation_index](reg, val)
         return True, opcode
+    
+    # ALU 16-bit add table
+    if (opcode & 0xCF) == 0x09:
+        pair_index = (opcode >> 4) & 0x03
+        val = getattr(reg, ADD_16[pair_index])  # Get the value of BC, DE, HL, or SP
+        add_hl_r16(reg, val)
+        return True, opcode
+    
+    # --- Conditional jumps and calls ---
     if (opcode & 0xE7) == 0x20:
         val = fetch_byte(mem, reg)
         if val >= 0x80:
