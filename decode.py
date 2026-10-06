@@ -1,6 +1,6 @@
 from mem import fetch_byte, write_byte
-from alu import (ADD_16, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rla, rra, rl_r8,
-    sra_a, swap_r8, bit_7_h, Z_MASK, N_MASK, H_MASK, C_MASK)   
+from alu import (ADD_16, POP_PUSH, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rla, rra, rl_r8,
+    sra_a, swap_r8, bit_7_h, Z_MASK, C_MASK)   
 
 
 r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
@@ -147,13 +147,12 @@ def jp(mem, reg):
     addr = (high << 8) | low
     reg.pc = addr
 
-def pop_r16(mem, reg, high_name, low_name):
+def pop_r16(mem, reg, pair_name):
     low = mem[reg.sp]
     reg.sp = (reg.sp + 1) & 0xFFFF
     high = mem[reg.sp]
     reg.sp = (reg.sp + 1) & 0xFFFF
-    setattr(reg, high_name, high)
-    setattr(reg, low_name, low)
+    setattr(reg, pair_name, (high << 8) | low)
 
 def push_r16(mem, reg, high_name, low_name):
     low = getattr(reg, low_name)
@@ -265,6 +264,13 @@ def decode(mem, reg, opcode):
         add_hl_r16(reg, val)
         return True, opcode
     
+    # PUSH/POP table
+    if (opcode & 0xCF) == 0xC1:
+        pair_index = (opcode >> 4) & 0x03
+        pair_name = POP_PUSH[pair_index]
+        pop_r16(mem, reg, pair_name)
+        return True, opcode
+
     # --- Conditional jumps and calls ---
     if (opcode & 0xE7) == 0x20:
         val = fetch_byte(mem, reg)
@@ -363,8 +369,6 @@ def decode(mem, reg, opcode):
             pass  # HALT instruction, do nothing for now            
         case 0x77:
             ld_hl_a(mem, reg)
-        case 0xC1:
-            pop_r16(mem, reg, 'b', 'c')
         case 0xC3:
             jp(mem, reg)
         case 0xC5:
@@ -379,8 +383,6 @@ def decode(mem, reg, opcode):
             call_a16(mem, reg)
         case 0xCF:
             rst(mem, reg, 0x08)
-        case 0xD1:
-            pop_r16(mem, reg, 'd', 'e')
         case 0xD5:
             push_r16(mem, reg, 'd', 'e')
         case 0xD7:
@@ -389,8 +391,6 @@ def decode(mem, reg, opcode):
             rst(mem, reg, 0x18)
         case 0xE0:
             ldh_a8_a(mem, reg)
-        case 0xE1:
-            pop_r16(mem, reg, 'h', 'l')
         case 0xE2:
             ld_c_a(mem, reg)
         case 0xE5:

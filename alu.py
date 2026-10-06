@@ -264,3 +264,10 @@ ADD_16 = [
     'hl',
     'sp'
 ]
+
+POP_PUSH = [
+    'bc',
+    'de',
+    'hl',
+    'af'
+]
