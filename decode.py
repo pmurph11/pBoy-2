@@ -238,7 +238,7 @@ def decode(mem, reg, opcode):
     # Inc 8 family
     if (opcode & 0xC7) == 0x04:
         operand_index = (opcode >> 3) & 0x07
-        val = get_operand(mem, reg, opcode & 0x07)
+        val = get_operand(mem, reg, operand_index)
         new_val = inc8(reg, val)
         set_operand(mem, reg, operand_index, new_val)
         return True, opcode
@@ -246,7 +246,7 @@ def decode(mem, reg, opcode):
     # Dec 8 family
     if (opcode & 0xC7) == 0x05:
         operand_index = (opcode >> 3) & 0x07
-        val = get_operand(mem, reg, opcode & 0x07)
+        val = get_operand(mem, reg, operand_index)
         new_val = dec8(reg, val)
         set_operand(mem, reg, operand_index, new_val)
         return True, opcode
