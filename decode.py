@@ -228,12 +228,27 @@ def decode(mem, reg, opcode):
         set_operand(mem, reg, dst, value)
         return True, opcode
 
-    # ALU table
     if 0x80 <= opcode <= 0xBF:
         operation_index = (opcode >> 3) & 0x07
         operand_index = opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         ALU_OPS[operation_index](reg, val)
+        return True, opcode
+
+    # Inc 8 family
+    if (opcode & 0xC7) == 0x04:
+        operation_index = (opcode >> 3) & 0x07
+        val = get_operand(mem, reg, opcode & 0x07)
+        new_val = inc8(reg, val)
+        set_operand(mem, reg, opcode & 0x07, new_val)
+        return True, opcode
+
+    # Dec 8 family
+    if (opcode & 0xC7) == 0x05:
+        operation_index = (opcode >> 3) & 0x07
+        val = get_operand(mem, reg, opcode & 0x07)
+        new_val = dec8(reg, val)
+        set_operand(mem, reg, opcode & 0x07, new_val)
         return True, opcode
     
     # ALU Immediate table
@@ -294,18 +309,10 @@ def decode(mem, reg, opcode):
             ld_r16_a(mem, reg, 'bc')
         case 0x03:
             step_r16(reg, 'b', 'c', 1)
-        case 0x04:
-            inc8(reg, 'b')
-        case 0x05:
-            dec8(reg, 'b')
         case 0x06:
             ld_r8_d8(mem, reg, 'b')
         case 0x0B:
             step_r16(reg, 'b', 'c', -1)
-        case 0x0C:
-            inc8(reg, 'c')
-        case 0x0D:
-            dec8(reg, 'c')
         case 0x0E:
             ld_r8_d8(mem, reg, 'c')
         case 0x11:
@@ -314,10 +321,6 @@ def decode(mem, reg, opcode):
             ld_r16_a(mem, reg, 'de')
         case 0x13:
             step_r16(reg, 'd', 'e', 1)
-        case 0x14:
-            inc8(reg, 'd')
-        case 0x15:
-            dec8(reg, 'd')
         case 0x16:
             ld_r8_d8(mem, reg, 'd')
         case 0x17:
@@ -328,10 +331,6 @@ def decode(mem, reg, opcode):
             ld_a_r16(mem, reg, 'd', 'e')
         case 0x1B:
             step_r16(reg, 'd', 'e', -1)
-        case 0x1C:
-            inc8(reg, 'e')
-        case 0x1D:
-            dec8(reg, 'e')
         case 0x1E:
             ld_r8_d8(mem, reg, 'e')
         case 0x1F:
@@ -342,20 +341,12 @@ def decode(mem, reg, opcode):
             ld_hl_step_a(mem, reg, 1)
         case 0x23:
             step_r16(reg, 'h', 'l', 1)
-        case 0x24:
-            inc8(reg, 'h')
-        case 0x25:
-            dec8(reg, 'h')
         case 0x26:
             ld_r8_d8(mem, reg, 'h')
         case 0x2A:
             ld_a_hl_step(mem, reg, 1)
         case 0x2B:
             step_r16(reg, 'h', 'l', -1)
-        case 0x2C:
-            inc8(reg, 'l')
-        case 0x2D:
-            dec8(reg, 'l')
         case 0x2E:
             ld_r8_d8(mem, reg, 'l')
         case 0x2F:
@@ -366,10 +357,6 @@ def decode(mem, reg, opcode):
             ld_hl_step_a(mem, reg, -1)
         case 0x36:
             ld_hl_d8(mem, reg)
-        case 0x3C:
-            inc8(reg, 'a')
-        case 0x3D:
-            dec8(reg, 'a')
         case 0x3E:
             ld_r8_d8(mem, reg, 'a')   
         case 0x76:

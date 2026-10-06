@@ -23,16 +23,11 @@ def alu_or(reg, val):
 
     if reg.a == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
-def dec_hl(reg, mem):
-    # CONTINUE HERE. UNFINISHED
-    pass
-    
-def dec8(reg, reg_name):
-    val = getattr(reg, reg_name)
+
+def dec8(reg, val):
     low = val & 0x0F
     half_borrow = (low == 0x00)
     dec_val = (val - 1) & 0xFF
-    setattr(reg, reg_name, dec_val)
 
     # CLEAR THE FLAGS
     reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # Clear Z, N, H flags (leave C alone)
@@ -42,6 +37,9 @@ def dec8(reg, reg_name):
     if half_borrow:
         reg.f |= H_MASK
     reg.f |= N_MASK  # Set N flag for decrement operation
+
+    return dec_val
+
 
 def alu_cp(reg, val):
     low_a = reg.a & 0x0F
@@ -150,19 +148,18 @@ def alu_sbc(reg, val):
     if original_a < val + carry:
         reg.f |= C_MASK  # Set C flag for full borrow
 
-def inc8(reg, reg_name):
-    val = getattr(reg, reg_name)
+def inc8(reg, val):
     low = val & 0x0F
     half_carry = (low == 0x0F)
     inc_val = (val + 1) & 0xFF
-    setattr(reg, reg_name, inc_val)
-
     reg.f &= ~(Z_MASK | N_MASK | H_MASK)  # clear only Z, N, H — leave C alone
 
     if inc_val == 0:
         reg.f |= Z_MASK
     if half_carry:
         reg.f |= H_MASK
+
+    return inc_val
 
 def alu_and(reg, val):
     reg.a &= val
