@@ -1,5 +1,5 @@
 from mem import fetch_byte, write_byte
-from alu import (ADD_16, POP_PUSH, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rla, rra, rl_r8,
+from alu import (ADD_16, POP_PUSH, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rla, rr_r8, rra, rl_r8,
     sra_a, swap_r8, bit_7_h, Z_MASK, C_MASK)   
 
 
@@ -182,6 +182,13 @@ def ret(mem, reg):
 def decode_cb(mem, reg):
     cb_opcode = fetch_byte(mem, reg)
 
+    # CB families
+    if (cb_opcode & 0xF8) == 0x18:  
+        operand_index = cb_opcode & 0x07
+        val = get_operand(mem, reg, operand_index)
+        set_operand(mem, reg, operand_index, rr_r8(reg, val))
+        return True, cb_opcode
+    
     match cb_opcode:
         case 0x7C:
             # BIT 7, H
