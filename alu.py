@@ -238,6 +238,19 @@ def rl_r8(reg, reg_name):
     if new_carry:
         reg.f |= C_MASK  # Set C flag if new carry is 1
 
+def srl_r8(reg, val):
+    new_carry = val & 0x01
+    val = (val >> 1) & 0xFF 
+
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
+
+    if val == 0:
+        reg.f |= Z_MASK  # Set Z flag if result is zero
+    if new_carry:
+        reg.f |= C_MASK  # Set C flag if new carry is 1
+
+    return val
+
 # --- CB-prefixed bit/swap instructions ---
 def swap_r8(reg, reg_name):
     val = getattr(reg, reg_name)
