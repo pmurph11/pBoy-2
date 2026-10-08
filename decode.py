@@ -68,7 +68,13 @@ def ld_a_c(mem, reg):
     val = reg.c
     reg.a = mem[base + val]
 
-# --- 16-bit Load instructions ---
+# --- 16-bit Load instruct;ions ---
+def ld_hl_sp_r8(mem, reg):
+    r8 = fetch_byte(mem, reg)
+    if r8 >= 0x80:
+        r8 -= 0x100
+    reg.sp = (reg.sp + r8) & 0xFFFF
+
 def ld_a_hl_step(mem, reg, step):
     reg.a = mem[reg.hl]
     reg.hl = (reg.hl + step) & 0xFFFF

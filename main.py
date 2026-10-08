@@ -9,7 +9,7 @@ def main():
 
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/09-op r,r.gb" # Pass 04, 06, 08, 
+    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/03-op sp,hl.gb" # Pass 04, 05, 06, 08, 
 
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
@@ -47,7 +47,7 @@ def main():
         if debug:
             print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count > 4000000:
+        if count > 6000000:
             running = False
 
     print("SERIAL OUTPUT:", "".join(serial_output))

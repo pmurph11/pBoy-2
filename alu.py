@@ -1,5 +1,4 @@
-from mem import write_byte
-
+from mem import fetch_byte
 
 Z_MASK = 0x80
 N_MASK = 0x40
@@ -57,6 +56,12 @@ def alu_cp(reg, val):
 def cpl(reg):
     reg.a ^= 0xFF  # Invert all bits in A
     reg.f |= 0x60  # Set N and H flags, clear Z and C flags
+
+def add_sp_r8(mem, reg):
+    r8 = fetch_byte(mem, reg)
+    if r8 >= 0x80:
+        r8 -= 0x100  # Convert to signed
+    reg.sp = (reg.sp + r8) & 0xFFFF
 
 def add_hl_r16(reg, val):
     hl = (reg.h << 8) | reg.l
