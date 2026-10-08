@@ -1,5 +1,5 @@
 from mem import fetch_byte, write_byte
-from alu import (ADD_16, POP_PUSH, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
+from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
     sra_a, step_sp, swap_r8, scf, ccf, bit_7_h, Z_MASK, C_MASK)   
 
 
@@ -71,9 +71,17 @@ def ld_a_c(mem, reg):
 # --- 16-bit Load instruct;ions ---
 def ld_hl_sp_r8(mem, reg):
     r8 = fetch_byte(mem, reg)
+    raw_byte = r8
+
+    reg.f &= ~(Z_MASK | N_MASK | C_MASK | H_MASK)  # Clear Z, N, C, H flags
+    if (reg.sp & 0x0F) + (raw_byte & 0x0F) > 0x0F:
+        reg.f |= H_MASK  # Set H flag if carry from bit 3
+    if (reg.sp & 0xFF) + (raw_byte & 0xFF) > 0xFF:
+        reg.f |= C_MASK  # Set C flag if carry from bit 7
+        
     if r8 >= 0x80:
         r8 -= 0x100
-    reg.sp = (reg.sp + r8) & 0xFFFF
+    reg.hl = (reg.sp + r8) & 0xFFFF
 
 def ld_a_hl_step(mem, reg, step):
     reg.a = mem[reg.hl]
@@ -456,6 +464,8 @@ def decode(mem, reg, opcode):
             push_r16(mem, reg, 'h', 'l')
         case 0xE7:
             rst(mem, reg, 0x20)
+        case 0xE8:
+            add_sp_r8(mem, reg)
         case 0xE9:
             reg.pc = reg.hl
         case 0xEA:
@@ -472,6 +482,8 @@ def decode(mem, reg, opcode):
             push_r16(mem, reg, 'a', 'f')
         case 0xF7:
             rst(mem, reg, 0x30)
+        case 0xF8:
+            ld_hl_sp_r8(mem, reg)
         case 0xF9:
             ld_sp_hl(mem, reg)
         case 0xFA:

@@ -59,6 +59,14 @@ def cpl(reg):
 
 def add_sp_r8(mem, reg):
     r8 = fetch_byte(mem, reg)
+    raw_byte = r8
+    
+    reg.f &= ~(Z_MASK | N_MASK | C_MASK | H_MASK)  # Clear Z, N, C, H flags
+    if (reg.sp & 0x0F) + (raw_byte & 0x0F) > 0x0F:
+        reg.f |= H_MASK  # Set H flag if carry from bit 3
+    if (reg.sp & 0xFF) + (raw_byte & 0xFF) > 0xFF:
+        reg.f |= C_MASK  # Set C flag if carry from bit 7
+
     if r8 >= 0x80:
         r8 -= 0x100  # Convert to signed
     reg.sp = (reg.sp + r8) & 0xFFFF
