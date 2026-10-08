@@ -1,5 +1,5 @@
 from mem import fetch_byte, write_byte
-from alu import (ADD_16, POP_PUSH, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rla, rr_r8, rra, rl_r8, srl_r8,
+from alu import (ADD_16, POP_PUSH, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
     sra_a, step_sp, swap_r8, bit_7_h, Z_MASK, C_MASK)   
 
 
@@ -352,6 +352,8 @@ def decode(mem, reg, opcode):
             step_r16(reg, 'b', 'c', 1)
         case 0x06:
             ld_r8_d8(mem, reg, 'b')
+        case 0x07:
+            rlca(reg)
         case 0x08:
             ld_a16_sp(mem, reg)    
         case 0x0A:
@@ -360,6 +362,8 @@ def decode(mem, reg, opcode):
             step_r16(reg, 'b', 'c', -1)
         case 0x0E:
             ld_r8_d8(mem, reg, 'c')
+        case 0x0F:
+            rrca(reg)
         case 0x11:
             ld_r16_d16(mem, reg, 'd', 'e')
         case 0x12:
