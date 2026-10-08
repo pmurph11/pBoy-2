@@ -1,5 +1,5 @@
 from cpu import Registers
-from mem import load_rom, fetch_opcode
+from mem import load_rom, fetch_opcode, serial_output
 from decode import decode
 
 
@@ -9,7 +9,7 @@ def main():
 
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/06-ld r,r.gb"
+    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb"
 
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
@@ -50,6 +50,7 @@ def main():
         if count > 5000000:
             running = False
 
+    print("SERIAL OUTPUT:", "".join(serial_output))
     print(f"Stopped after {count} instructions at PC {reg.pc:04X}")
     print(f"Registers: {reg}")
 

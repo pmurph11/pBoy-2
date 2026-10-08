@@ -3,7 +3,9 @@ def load_rom(path):
         data = f.read()
     return data
 
+serial_output = []
 debug = False  # Set to True to enable debug output
+
 def fetch_byte(mem, reg):
     byte = mem[reg.pc]
     if debug:
@@ -18,7 +20,7 @@ def write_byte(mem, addr, val):
     # Writing a value with bit 7 set to serial control (0xFF02) means
     # "send the byte currently in serial buffer (0xFF01)".
     if addr == 0xFF02 and (val & 0x80):
-        print(chr(mem[0xFF01]), end='', flush=True)
+        serial_output.append(chr(mem[0xFF01]))
         mem[0xFF02] = val & 0x7F   # clear bit 7 = transfer finished
 
     if debug:

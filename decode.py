@@ -78,6 +78,12 @@ def ld_a16_a(mem, reg):
     addr = high << 8 | low
     write_byte(mem, addr, reg.a)
 
+def ld_a_a16(mem, reg):
+    low = fetch_byte(mem, reg)
+    high = fetch_byte(mem, reg)
+    addr = (high << 8) | low
+    reg.a = mem[addr]
+
 def ld_r16_d16(mem, reg, high_name, low_name):
     low = fetch_byte(mem, reg)
     high = fetch_byte(mem, reg)
@@ -89,6 +95,16 @@ def ld_sp_d16(mem, reg):
     high = fetch_byte(mem, reg)
     reg.sp = (high << 8) | low
     # Flags: Z=0, N=0, H=0, C=0
+
+def ld_sp_hl(mem, reg):
+    reg.sp = reg.hl
+
+def ld_a16_sp(mem, reg):
+    low = fetch_byte(mem, reg)
+    high = fetch_byte(mem, reg)
+    addr = (high << 8) | low
+    write_byte(mem, addr, reg.sp & 0xFF)  # Low byte
+    write_byte(mem, addr + 1, (reg.sp >> 8) & 0xFF)  # High byte
 
 def check_condition(reg, flag_number):
     if flag_number == 0:
@@ -330,6 +346,8 @@ def decode(mem, reg, opcode):
             step_r16(reg, 'b', 'c', 1)
         case 0x06:
             ld_r8_d8(mem, reg, 'b')
+        case 0x08:
+            ld_a16_sp(mem, reg)            
         case 0x0B:
             step_r16(reg, 'b', 'c', -1)
         case 0x0E:
@@ -424,6 +442,10 @@ def decode(mem, reg, opcode):
             push_r16(mem, reg, 'a', 'f')
         case 0xF7:
             rst(mem, reg, 0x30)
+        case 0xF9:
+            ld_sp_hl(mem, reg)
+        case 0xFA:
+            ld_a_a16(mem, reg)
         case 0xFB:
             # EI — on real hardware interrupts are enabled AFTER the next
             # instruction executes, not immediately. Harmless until
