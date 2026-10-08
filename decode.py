@@ -62,6 +62,12 @@ def ld_c_a(mem, reg):
     val = reg.c
     write_byte(mem, base + val, reg.a)
 
+# LD A,(C): read a byte from the hardware area (FF00-FFFF), slot chosen by C
+def ld_a_c(mem, reg):
+    base = 0xFF00
+    val = reg.c
+    reg.a = mem[base + val]
+
 # --- 16-bit Load instructions ---
 def ld_a_hl_step(mem, reg, step):
     reg.a = mem[reg.hl]
@@ -347,7 +353,9 @@ def decode(mem, reg, opcode):
         case 0x06:
             ld_r8_d8(mem, reg, 'b')
         case 0x08:
-            ld_a16_sp(mem, reg)            
+            ld_a16_sp(mem, reg)    
+        case 0x0A:
+            ld_a_r16(mem, reg, 'b', 'c')        
         case 0x0B:
             step_r16(reg, 'b', 'c', -1)
         case 0x0E:
@@ -396,6 +404,8 @@ def decode(mem, reg, opcode):
             step_sp(reg, 1)
         case 0x36:
             ld_hl_d8(mem, reg)
+        case 0x3A:
+            ld_a_hl_step(mem, reg, -1)
         case 0x3B:
             step_sp(reg, -1)
         case 0x3E:
@@ -440,6 +450,8 @@ def decode(mem, reg, opcode):
             rst(mem, reg, 0x28)
         case 0xF0:
             ld_a_a8(mem, reg)
+        case 0xF2:
+            ld_a_c(mem, reg)
         case 0xF3:
             reg.ime = False
         case 0xF5:
