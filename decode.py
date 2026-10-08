@@ -392,8 +392,12 @@ def decode(mem, reg, opcode):
             ld_sp_d16(mem, reg)
         case 0x32:
             ld_hl_step_a(mem, reg, -1)
+        case 0x33:
+            step_r16(reg, 'h', 'l', 1)
         case 0x36:
             ld_hl_d8(mem, reg)
+        case 0x3B:
+            step_r16(reg, 'h', 'l', -1)
         case 0x3E:
             ld_r8_d8(mem, reg, 'a')   
         case 0x76:

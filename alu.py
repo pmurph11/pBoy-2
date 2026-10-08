@@ -192,6 +192,9 @@ def step_r16(reg, high_name, low_name, step):
     setattr(reg, high_name, (high))
     setattr(reg, low_name, (low))
 
+def step_sp(reg, step):
+    reg.sp = (reg.sp + step) & 0xFFFF  # Increment/Decrement
+
 # --- Rotate/Shift instructions ---
 def rla(reg):
     carry = (reg.f & 0x10) >> 4  # Get the current carry flag (C)
