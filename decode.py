@@ -1,5 +1,5 @@
 from mem import fetch_byte, write_byte
-from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
+from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_sp_r8, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
     sra_a, step_sp, swap_r8, scf, ccf, bit_7_h, Z_MASK, C_MASK)   
 
 
