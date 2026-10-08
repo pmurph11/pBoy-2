@@ -280,6 +280,14 @@ def swap_r8(reg, reg_name):
     if swapped_val == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
 
+def scf(reg):
+    reg.f &= ~(N_MASK | H_MASK)  # Clear N, H flags
+    reg.f |= C_MASK  # Set C flag
+
+def ccf(reg):
+    reg.f &= ~(N_MASK | H_MASK)  # Clear N, H flags
+    reg.f ^= C_MASK  # Toggle C flag
+
 def bit_7_h(reg):
     # Clear N flag
     reg.f &= ~N_MASK
