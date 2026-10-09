@@ -343,6 +343,14 @@ def cb_bit(reg, bit, val):
     else:
         reg.f |= Z_MASK
 
+def cb_res(bit, val):
+    val &= ~(1 << bit)
+    return val
+
+
+def cb_set(bit, val):
+    val |= (1 << bit)
+    return val
 
 ALU_OPS = [
     alu_add,
