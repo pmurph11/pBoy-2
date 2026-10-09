@@ -1,6 +1,6 @@
 from mem import fetch_byte, write_byte
 from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_sp_r8, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
-    sra_a, step_sp, swap_r8, scf, ccf, bit_7_h, Z_MASK, C_MASK)   
+    sra_a, step_sp, swap_r8, scf, ccf, bit_7_h, daa, Z_MASK, C_MASK)   
 
 
 r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
@@ -415,6 +415,8 @@ def decode(mem, reg, opcode):
             step_r16(reg, 'h', 'l', 1)
         case 0x26:
             ld_r8_d8(mem, reg, 'h')
+        case 0x27:
+            daa(reg)
         case 0x2A:
             ld_a_hl_step(mem, reg, 1)
         case 0x2B:

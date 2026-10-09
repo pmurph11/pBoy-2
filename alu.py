@@ -57,10 +57,30 @@ def cpl(reg):
     reg.a ^= 0xFF  # Invert all bits in A
     reg.f |= 0x60  # Set N and H flags, clear Z and C flags
 
+def daa(reg):
+    if (reg.f & N_MASK) == 0:
+        if (reg.f & C_MASK) or (reg.a > 0x99):
+            reg.a = (reg.a + 0x60) & 0xFF
+            reg.f |= C_MASK
+        if (reg.f & H_MASK) or (reg.a & 0x0F) > 9:
+            reg.a = (reg.a + 0x06) & 0xFF
+    if (reg.f & N_MASK):
+        if (reg.f & C_MASK):
+            reg.a = (reg.a - 0x60) & 0xFF
+        if (reg.f & H_MASK):
+            reg.a = (reg.a - 0x06)& 0xFF
+
+    if reg.a == 0:
+        reg.f |= Z_MASK
+    else:
+        reg.f &= ~(Z_MASK)
+
+    reg.f &= ~(H_MASK)
+
 def add_sp_r8(mem, reg):
     r8 = fetch_byte(mem, reg)
     raw_byte = r8
-    
+
     reg.f &= ~(Z_MASK | N_MASK | C_MASK | H_MASK)  # Clear Z, N, C, H flags
     if (reg.sp & 0x0F) + (raw_byte & 0x0F) > 0x0F:
         reg.f |= H_MASK  # Set H flag if carry from bit 3
