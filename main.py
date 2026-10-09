@@ -9,7 +9,7 @@ def main():
 
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb" # Passes 03, 04, 05, 06, 08, 
+    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/01-special.gb" # Passes 03, 04, 05, 06, 08, 
 
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
@@ -24,7 +24,9 @@ def main():
     running = True
     instruction_count = 0
     ly = 0
+    boot_rom_active = True
 
+    
     while running:
         # Fake scanline counter for LY register, incrementing every 10 instructions
         instruction_count += 1
@@ -38,6 +40,10 @@ def main():
         addr = reg.pc
         opcode = fetch_opcode(mem, reg)
         running, display_opcode = decode(mem, reg, opcode)
+        if boot_rom_active and mem[0xFF50] != 0x00:
+            print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
+            mem[0x0000:0x0100] = first_256_bytes  
+            boot_rom_active = False
         prefix = "CB " if opcode == 0xCB else ""
 
         # Show debug if count between x-x value
@@ -47,7 +53,7 @@ def main():
         if debug:
             print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count > 6000000:
+        if count > 15000000:
             running = False
 
     print("SERIAL OUTPUT:", "".join(serial_output))

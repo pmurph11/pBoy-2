@@ -215,6 +215,13 @@ def ret(mem, reg):
     addr = (high << 8) | low
     reg.pc = addr
 
+def reti(mem, reg):
+    ret(mem, reg)
+    reg.ime = True # Enable interrupts after returning
+
+def stop(mem, reg):
+    fetch_byte(mem, reg)  # Consume the next byte (0x00)
+
 def decode_cb(mem, reg):
     cb_opcode = fetch_byte(mem, reg)
 
@@ -369,7 +376,9 @@ def decode(mem, reg, opcode):
         case 0x07:
             rlca(reg)
         case 0x08:
-            ld_a16_sp(mem, reg)    
+            ld_a16_sp(mem, reg)  
+        case 0x10:
+            stop(mem, reg)  
         case 0x0A:
             ld_a_r16(mem, reg, 'b', 'c')        
         case 0x0B:
@@ -454,6 +463,8 @@ def decode(mem, reg, opcode):
             push_r16(mem, reg, 'd', 'e')
         case 0xD7:
             rst(mem, reg, 0x10)
+        case 0xD9:
+            reti(mem, reg)
         case 0xDF:
             rst(mem, reg, 0x18)
         case 0xE0:
