@@ -334,6 +334,16 @@ def bit_7_h(reg):
     else:
         reg.f |= Z_MASK
 
+def cb_bit(reg, bit, val):
+    reg.f &= ~N_MASK
+    reg.f |= H_MASK
+
+    if val & (1 << bit):
+        reg.f &= ~Z_MASK
+    else:
+        reg.f |= Z_MASK
+
+
 ALU_OPS = [
     alu_add,
     alu_adc,
