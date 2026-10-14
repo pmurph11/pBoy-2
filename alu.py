@@ -229,6 +229,30 @@ def step_sp(reg, step):
     reg.sp = (reg.sp + step) & 0xFFFF  # Increment/Decrement
 
 # --- Rotate/Shift instructions ---
+def rlc_r8(reg, val):
+    new_carry = (val & Z_MASK) >> 7  # Current carry is the MSB
+    val = ((val << 1) | new_carry) & 0xFF  # Shift left and wrap around the MSB to LSB
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
+
+    if val == 0:
+        reg.f |= Z_MASK  # Set Z flag if result is zero
+    if new_carry:
+        reg.f |= C_MASK  # Set C flag if new carry is 1
+
+    return val
+
+def rrc_r8(reg, val):
+    new_carry = val & 0x01
+    val = ((val >> 1) | (new_carry << 7)) & 0xFF  # Shift right and wrap around the LSB to MSB
+    reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
+
+    if val == 0:
+        reg.f |= Z_MASK  # Set Z flag if result is zero
+    if new_carry:
+        reg.f |= C_MASK  # Set C flag if new carry is 1
+
+    return val
+
 def rlca(reg):
     new_carry = (reg.a & Z_MASK) >> 7 # Current carry is the MSB of A
     reg.a = ((reg.a << 1) | new_carry) & 0xFF  # Shift left and wrap around the MSB to LSB

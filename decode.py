@@ -1,5 +1,5 @@
 from mem import fetch_byte, write_byte
-from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_sp_r8, add_hl_r16, ALU_OPS, inc8, dec8, cpl, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
+from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_sp_r8, add_hl_r16, ALU_OPS, inc8, dec8, cpl, rrc_r8, rlc_r8, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
     sra_a, step_sp, swap_r8, scf, ccf, bit_7_h, daa, cb_bit, cb_res, cb_set, Z_MASK, C_MASK)   
 
 
@@ -251,6 +251,18 @@ def decode_cb(mem, reg):
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rr_r8(reg, val))
+        return True, cb_opcode
+
+    if (cb_opcode & 0xF8) == 0x00:  
+        operand_index = cb_opcode & 0x07
+        val = get_operand(mem, reg, operand_index)
+        set_operand(mem, reg, operand_index, rlc_r8(reg, val))
+        return True, cb_opcode
+
+    if (cb_opcode & 0xF8) == 0x08:  
+        operand_index = cb_opcode & 0x07
+        val = get_operand(mem, reg, operand_index)
+        set_operand(mem, reg, operand_index, rrc_r8(reg, val))
         return True, cb_opcode
 
     if (cb_opcode & 0xF8) == 0x38:
