@@ -289,6 +289,12 @@ def decode_cb(mem, reg):
         set_operand(mem, reg, operand_index, sra_r8(reg, val))
         return True, cb_opcode
 
+    if (cb_opcode & 0xF8) == 0x30:
+        operand_index = cb_opcode & 0x07
+        val = get_operand(mem, reg, operand_index)
+        set_operand(mem, reg, operand_index, swap_r8(reg, val))
+        return True, cb_opcode
+
     match cb_opcode:
         case 0x7C:
             # BIT 7, H

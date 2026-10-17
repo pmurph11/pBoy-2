@@ -348,14 +348,14 @@ def srl_r8(reg, val):
     return val
 
 # --- CB-prefixed bit/swap instructions ---
-def swap_r8(reg, reg_name):
-    val = getattr(reg, reg_name)
+def swap_r8(reg, val):
     swapped_val = ((val & 0x0F) << 4) | ((val & 0xF0) >> 4)
-    setattr(reg, reg_name, swapped_val)
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
     if swapped_val == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
+
+    return swapped_val
 
 def scf(reg):
     reg.f &= ~(N_MASK | H_MASK)  # Clear N, H flags
