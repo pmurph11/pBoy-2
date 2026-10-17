@@ -7,13 +7,20 @@ C_MASK = 0x10
 
 
 # --- 8-bit Arithmetic/Logic instructions ---
-def sra_a(reg):
-    reg.a = (reg.a >> 1) | (reg.a & Z_MASK)  # Preserve the MSB
+def sra_r8(reg, val):
+    new_carry = val & 0x01  # Current carry is the LSB
+    val = (val >> 1) | (val & Z_MASK)  # Preserve the MSB
 
     reg.f &= ~(Z_MASK | N_MASK | H_MASK | C_MASK)  # Clear Z, N, H, C flags
 
-    if reg.a == 0:
+    if val == 0:
         reg.f |= Z_MASK  # Set Z flag if result is zero
+
+    if new_carry:
+        reg.f |= C_MASK  # Set C flag if new carry is 1
+
+    return val
+    
 
 def alu_or(reg, val):
     reg.a |= val

@@ -9,7 +9,7 @@ def main():
 
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/09-op r,r.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 10
+    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/11-op a,(hl).gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10
 
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
