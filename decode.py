@@ -71,7 +71,7 @@ def ld_a_c(mem, reg):
     val = reg.c
     reg.a = mem[base + val]
 
-# --- 16-bit Load instruct;ions ---
+# --- 16-bit Load instructions ---
 def ld_hl_sp_r8(mem, reg):
     r8 = fetch_byte(mem, reg)
     raw_byte = r8
@@ -327,7 +327,7 @@ def decode(mem, reg, opcode):
         set_operand(mem, reg, operand_index, new_val)
         cycles = 4
         if operand_index == 6:  # If operand is (HL), it takes extra cycles
-            cycles = 8
+            cycles = 12
         return True, opcode, cycles
 
     # Dec 8 family
@@ -338,7 +338,7 @@ def decode(mem, reg, opcode):
         set_operand(mem, reg, operand_index, new_val)
         cycles = 4
         if operand_index == 6:  # If operand is (HL), it takes extra cycles
-            cycles = 8
+            cycles = 12
         return True, opcode, cycles
 
     # ALU Immediate table
@@ -370,35 +370,43 @@ def decode(mem, reg, opcode):
         val = fetch_byte(mem, reg)
         if val >= 0x80:
             val -= 0x100  # Convert to signed
+        cycles = 8
         if check_flag_condition(reg, (opcode >> 3) & 0x03):
             reg.pc = (reg.pc + val) & 0xFFFF  # Jump to new address, wrap around at 16 bits
-        return True, opcode, 4
+            cycles = 12
+        return True, opcode, cycles
     
     if (opcode & 0xE7) == 0xC0:
+        cycles = 8
         if check_flag_condition(reg, (opcode >> 3) & 0x03):
             low = mem[reg.sp]
             reg.sp = (reg.sp + 1) & 0xFFFF
             high = mem[reg.sp]
             reg.sp = (reg.sp + 1) & 0xFFFF
             reg.pc = (high << 8) | low
-        return True, opcode, 4
+            cycles = 20
+        return True, opcode, cycles
 
     if (opcode & 0xE7) == 0xC2:
         low = fetch_byte(mem, reg)
         high = fetch_byte(mem, reg)
         addr = (high << 8) | low
+        cycles = 12
         if check_flag_condition(reg, (opcode >> 3) & 0x03):
             reg.pc = addr
-        return True, opcode, 4
+            cycles = 16
+        return True, opcode, cycles
 
     if (opcode & 0xE7) == 0xC4:
         low = fetch_byte(mem, reg)
         high = fetch_byte(mem, reg)
         addr = (high << 8) | low    
+        cycles = 12
         if check_flag_condition(reg, (opcode >> 3) & 0x03):
             push_pc(mem, reg)
             reg.pc = addr
-        return True, opcode, 4
+            cycles = 24
+        return True, opcode, cycles
 
     match opcode:
         case 0x00:
