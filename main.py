@@ -58,8 +58,8 @@ def main():
             running = False
 
     print("SERIAL OUTPUT:", "".join(serial_output))
-    print(f"Stopped after {count} instructions at PC {reg.pc:04X}")(
-    print(f"Total cycles executed: {total_cycles}"))
+    print(f"Stopped after {count} instructions at PC {reg.pc:04X}")
+    print(f"Total cycles executed: {total_cycles}")
     print(f"Registers: {reg}")
 
 

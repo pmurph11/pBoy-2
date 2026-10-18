@@ -126,7 +126,7 @@ def ld_a16_sp(mem, reg):
     write_byte(mem, addr, reg.sp & 0xFF)  # Low byte
     write_byte(mem, addr + 1, (reg.sp >> 8) & 0xFF)  # High byte
 
-def check_condition(reg, flag_number):
+def check_flag_condition(reg, flag_number):
     if flag_number == 0:
         return (reg.f & Z_MASK) == 0  # Z flag not set
     elif flag_number == 1:
@@ -227,13 +227,15 @@ def decode_cb(mem, reg):
     operand_index = cb_opcode & 0x07
     cycles = 8
     if operand_index == 6:  # (HL) is accessed, takes extra cycles
-        cycles = 12
+        cycles = 16
 
     # CB families
     if (cb_opcode & 0xC0) == 0x40:
         bit_no = (cb_opcode >> 3) & 0x07
         val = get_operand(mem, reg, operand_index)
         cb_bit(reg, bit_no, val)
+        if operand_index == 6:
+            cycles = 12  # (HL) takes extra cycles for bit test
         return True, cb_opcode, cycles
 
     if (cb_opcode & 0xC0) == 0x80:
@@ -350,12 +352,12 @@ def decode(mem, reg, opcode):
         val = fetch_byte(mem, reg)
         if val >= 0x80:
             val -= 0x100  # Convert to signed
-        if check_condition(reg, (opcode >> 3) & 0x03):
+        if check_flag_condition(reg, (opcode >> 3) & 0x03):
             reg.pc = (reg.pc + val) & 0xFFFF  # Jump to new address, wrap around at 16 bits
         return True, opcode, 4
     
     if (opcode & 0xE7) == 0xC0:
-        if check_condition(reg, (opcode >> 3) & 0x03):
+        if check_flag_condition(reg, (opcode >> 3) & 0x03):
             low = mem[reg.sp]
             reg.sp = (reg.sp + 1) & 0xFFFF
             high = mem[reg.sp]
@@ -367,7 +369,7 @@ def decode(mem, reg, opcode):
         low = fetch_byte(mem, reg)
         high = fetch_byte(mem, reg)
         addr = (high << 8) | low
-        if check_condition(reg, (opcode >> 3) & 0x03):
+        if check_flag_condition(reg, (opcode >> 3) & 0x03):
             reg.pc = addr
         return True, opcode, 4
 
@@ -375,7 +377,7 @@ def decode(mem, reg, opcode):
         low = fetch_byte(mem, reg)
         high = fetch_byte(mem, reg)
         addr = (high << 8) | low    
-        if check_condition(reg, (opcode >> 3) & 0x03):
+        if check_flag_condition(reg, (opcode >> 3) & 0x03):
             push_pc(mem, reg)
             reg.pc = addr
         return True, opcode, 4
