@@ -1,6 +1,9 @@
 from mem import fetch_byte, write_byte
-from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_sp_r8, add_hl_r16, ALU_OPS, inc8, dec8, cpl, rrc_r8, rlc_r8, sla_r8, step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
-    sra_r8, step_sp, swap_r8, scf, ccf, bit_7_h, daa, cb_bit, cb_res, cb_set, Z_MASK, C_MASK)   
+from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_sp_r8, 
+                 add_hl_r16, ALU_OPS, inc8, dec8, cpl, rrc_r8, rlc_r8, sla_r8, 
+                 step_r16, rlca, rla, rr_r8, rrca, rra, rl_r8, srl_r8,
+                 sra_r8, step_sp, swap_r8, scf, ccf, daa, cb_bit, cb_res, cb_set, 
+                 Z_MASK, C_MASK)   
 
 
 r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
@@ -301,14 +304,20 @@ def decode(mem, reg, opcode):
         dst, src = ld_r8_r8_table[opcode]
         value = get_operand(mem, reg, src)
         set_operand(mem, reg, dst, value)
-        return True, opcode, 4
+        cycles = 4
+        if dst == 6 or src == 6:  # If either operand is (HL), it takes extra cycles
+            cycles = 8
+        return True, opcode, cycles
 
     if 0x80 <= opcode <= 0xBF:
         operation_index = (opcode >> 3) & 0x07
         operand_index = opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         ALU_OPS[operation_index](reg, val)
-        return True, opcode, 4
+        cycles = 4
+        if operand_index == 6:  # If operand is (HL), it takes extra cycles
+            cycles = 8
+        return True, opcode, cycles
 
     # Inc 8 family
     if (opcode & 0xC7) == 0x04:
@@ -316,7 +325,10 @@ def decode(mem, reg, opcode):
         val = get_operand(mem, reg, operand_index)
         new_val = inc8(reg, val)
         set_operand(mem, reg, operand_index, new_val)
-        return True, opcode, 4
+        cycles = 4
+        if operand_index == 6:  # If operand is (HL), it takes extra cycles
+            cycles = 8
+        return True, opcode, cycles
 
     # Dec 8 family
     if (opcode & 0xC7) == 0x05:
@@ -324,28 +336,34 @@ def decode(mem, reg, opcode):
         val = get_operand(mem, reg, operand_index)
         new_val = dec8(reg, val)
         set_operand(mem, reg, operand_index, new_val)
-        return True, opcode, 4
-    
+        cycles = 4
+        if operand_index == 6:  # If operand is (HL), it takes extra cycles
+            cycles = 8
+        return True, opcode, cycles
+
     # ALU Immediate table
     if (opcode & 0xC7) == 0xC6:
         operation_index = (opcode >> 3) & 0x07
         val = fetch_byte(mem, reg)
         ALU_OPS[operation_index](reg, val)
-        return True, opcode, 4
+        cycles = 8
+        return True, opcode, cycles
     
     # ALU 16-bit add table
     if (opcode & 0xCF) == 0x09:
         pair_index = (opcode >> 4) & 0x03
         val = getattr(reg, ADD_16[pair_index])  # Get the value of BC, DE, HL, or SP
         add_hl_r16(reg, val)
-        return True, opcode, 4
+        cycles = 8
+        return True, opcode, cycles
     
     # PUSH/POP table
     if (opcode & 0xCF) == 0xC1:
         pair_index = (opcode >> 4) & 0x03
         pair_name = POP_PUSH[pair_index]
         pop_r16(mem, reg, pair_name)
-        return True, opcode, 4
+        cycles = 12
+        return True, opcode, cycles
 
     # --- Conditional jumps and calls ---
     if (opcode & 0xE7) == 0x20:
