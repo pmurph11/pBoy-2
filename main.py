@@ -3,6 +3,7 @@ from mem import load_rom, fetch_opcode, serial_output
 from decode import decode
 
 
+
 def main():
 
     debug = False   # Set for debugging

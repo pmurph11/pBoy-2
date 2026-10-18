@@ -224,76 +224,69 @@ def stop(mem, reg):
 
 def decode_cb(mem, reg):
     cb_opcode = fetch_byte(mem, reg)
+    operand_index = cb_opcode & 0x07
+    cycles = 8
+    if operand_index == 6:  # (HL) is accessed, takes extra cycles
+        cycles = 12
 
     # CB families
     if (cb_opcode & 0xC0) == 0x40:
         bit_no = (cb_opcode >> 3) & 0x07
-        operand_index = cb_opcode & 0x07     # keep the bottom three bits
         val = get_operand(mem, reg, operand_index)
         cb_bit(reg, bit_no, val)
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xC0) == 0x80:
         bit_no = (cb_opcode >> 3) & 0x07
-        operand_index = cb_opcode & 0x07     # keep the bottom three bits
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, cb_res(bit_no, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xC0) == 0xC0:
         bit_no = (cb_opcode >> 3) & 0x07
-        operand_index = cb_opcode & 0x07     # keep the bottom three bits
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, cb_set(bit_no, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xF8) == 0x18:  
-        operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rr_r8(reg, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xF8) == 0x10:  
-        operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rl_r8(reg, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xF8) == 0x00:  
-        operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rlc_r8(reg, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xF8) == 0x08:  
-        operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rrc_r8(reg, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xF8) == 0x38:
-        operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, srl_r8(reg, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xF8) == 0x20:
-        operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, sla_r8(reg, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
     
     if (cb_opcode & 0xF8) == 0x28:  
-        operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, sra_r8(reg, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     if (cb_opcode & 0xF8) == 0x30:
-        operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, swap_r8(reg, val))
-        return True, cb_opcode, 4
+        return True, cb_opcode, cycles
 
     match cb_opcode:
         case _:
