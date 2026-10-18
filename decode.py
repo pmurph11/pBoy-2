@@ -231,115 +231,89 @@ def decode_cb(mem, reg):
         operand_index = cb_opcode & 0x07     # keep the bottom three bits
         val = get_operand(mem, reg, operand_index)
         cb_bit(reg, bit_no, val)
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xC0) == 0x80:
         bit_no = (cb_opcode >> 3) & 0x07
         operand_index = cb_opcode & 0x07     # keep the bottom three bits
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, cb_res(bit_no, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xC0) == 0xC0:
         bit_no = (cb_opcode >> 3) & 0x07
         operand_index = cb_opcode & 0x07     # keep the bottom three bits
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, cb_set(bit_no, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xF8) == 0x18:  
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rr_r8(reg, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xF8) == 0x10:  
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rl_r8(reg, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xF8) == 0x00:  
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rlc_r8(reg, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xF8) == 0x08:  
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, rrc_r8(reg, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xF8) == 0x38:
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, srl_r8(reg, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xF8) == 0x20:
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, sla_r8(reg, val))
-        return True , cb_opcode
+        return True, cb_opcode, 4
     
     if (cb_opcode & 0xF8) == 0x28:  
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, sra_r8(reg, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     if (cb_opcode & 0xF8) == 0x30:
         operand_index = cb_opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         set_operand(mem, reg, operand_index, swap_r8(reg, val))
-        return True, cb_opcode
+        return True, cb_opcode, 4
 
     match cb_opcode:
-        case 0x7C:
-            # BIT 7, H
-            bit_7_h(reg)
-            return True, cb_opcode
-        case 0x30:
-            swap_r8(reg, 'b')
-            return True, cb_opcode
-        case 0x31:
-            swap_r8(reg, 'c')
-            return True, cb_opcode
-        case 0x32:
-            swap_r8(reg, 'd')
-            return True, cb_opcode
-        case 0x33:
-            swap_r8(reg, 'e')
-            return True, cb_opcode
-        case 0x34:
-            swap_r8(reg, 'h')
-            return True, cb_opcode
-        case 0x35:
-            swap_r8(reg, 'l')
-            return True, cb_opcode
-        case 0x37:
-            # SWAP A
-            swap_r8(reg, 'a')
-            return True, cb_opcode
         case _:
             print(f"Unknown CB opcode: {cb_opcode:02X} at PC {(reg.pc - 2) & 0xFFFF:04X}")
             print(f"  Registers: {reg}")
-            return False, cb_opcode
+            return False, cb_opcode, 0
 
 def decode(mem, reg, opcode):
     if opcode in ld_r8_r8_table:
         dst, src = ld_r8_r8_table[opcode]
         value = get_operand(mem, reg, src)
         set_operand(mem, reg, dst, value)
-        return True, opcode
+        return True, opcode, 4
 
     if 0x80 <= opcode <= 0xBF:
         operation_index = (opcode >> 3) & 0x07
         operand_index = opcode & 0x07
         val = get_operand(mem, reg, operand_index)
         ALU_OPS[operation_index](reg, val)
-        return True, opcode
+        return True, opcode, 4
 
     # Inc 8 family
     if (opcode & 0xC7) == 0x04:
@@ -347,7 +321,7 @@ def decode(mem, reg, opcode):
         val = get_operand(mem, reg, operand_index)
         new_val = inc8(reg, val)
         set_operand(mem, reg, operand_index, new_val)
-        return True, opcode
+        return True, opcode, 4
 
     # Dec 8 family
     if (opcode & 0xC7) == 0x05:
@@ -355,28 +329,28 @@ def decode(mem, reg, opcode):
         val = get_operand(mem, reg, operand_index)
         new_val = dec8(reg, val)
         set_operand(mem, reg, operand_index, new_val)
-        return True, opcode
+        return True, opcode, 4
     
     # ALU Immediate table
     if (opcode & 0xC7) == 0xC6:
         operation_index = (opcode >> 3) & 0x07
         val = fetch_byte(mem, reg)
         ALU_OPS[operation_index](reg, val)
-        return True, opcode
+        return True, opcode, 4
     
     # ALU 16-bit add table
     if (opcode & 0xCF) == 0x09:
         pair_index = (opcode >> 4) & 0x03
         val = getattr(reg, ADD_16[pair_index])  # Get the value of BC, DE, HL, or SP
         add_hl_r16(reg, val)
-        return True, opcode
+        return True, opcode, 4
     
     # PUSH/POP table
     if (opcode & 0xCF) == 0xC1:
         pair_index = (opcode >> 4) & 0x03
         pair_name = POP_PUSH[pair_index]
         pop_r16(mem, reg, pair_name)
-        return True, opcode
+        return True, opcode, 4
 
     # --- Conditional jumps and calls ---
     if (opcode & 0xE7) == 0x20:
@@ -385,7 +359,7 @@ def decode(mem, reg, opcode):
             val -= 0x100  # Convert to signed
         if check_condition(reg, (opcode >> 3) & 0x03):
             reg.pc = (reg.pc + val) & 0xFFFF  # Jump to new address, wrap around at 16 bits
-        return True, opcode
+        return True, opcode, 4
     
     if (opcode & 0xE7) == 0xC0:
         if check_condition(reg, (opcode >> 3) & 0x03):
@@ -394,7 +368,7 @@ def decode(mem, reg, opcode):
             high = mem[reg.sp]
             reg.sp = (reg.sp + 1) & 0xFFFF
             reg.pc = (high << 8) | low
-        return True, opcode
+        return True, opcode, 4
 
     if (opcode & 0xE7) == 0xC2:
         low = fetch_byte(mem, reg)
@@ -402,7 +376,7 @@ def decode(mem, reg, opcode):
         addr = (high << 8) | low
         if check_condition(reg, (opcode >> 3) & 0x03):
             reg.pc = addr
-        return True, opcode
+        return True, opcode, 4
 
     if (opcode & 0xE7) == 0xC4:
         low = fetch_byte(mem, reg)
@@ -411,7 +385,7 @@ def decode(mem, reg, opcode):
         if check_condition(reg, (opcode >> 3) & 0x03):
             push_pc(mem, reg)
             reg.pc = addr
-        return True, opcode
+        return True, opcode, 4
 
     match opcode:
         case 0x00:
@@ -562,5 +536,5 @@ def decode(mem, reg, opcode):
         case _:
             print(f"Unknown opcode: {opcode:02X} at PC {(reg.pc - 1) & 0xFFFF:04X}")
             print(f"  Registers: {reg}")
-            return False, opcode
-    return True, opcode
+            return False, opcode, 0
+    return True, opcode, 4

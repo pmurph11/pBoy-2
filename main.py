@@ -9,7 +9,7 @@ def main():
 
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/02-interrupts.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11
+    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/06-ld r,r.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
 
@@ -24,7 +24,7 @@ def main():
     instruction_count = 0
     ly = 0
     boot_rom_active = True
-
+    total_cycles = 0
     
     while running:
         # Fake scanline counter for LY register, incrementing every 10 instructions
@@ -38,7 +38,8 @@ def main():
 
         addr = reg.pc
         opcode = fetch_opcode(mem, reg)
-        running, display_opcode = decode(mem, reg, opcode)
+        running, display_opcode, cycles = decode(mem, reg, opcode)
+        total_cycles += cycles
         if boot_rom_active and mem[0xFF50] != 0x00:
             print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
             mem[0x0000:0x0100] = first_256_bytes  
@@ -56,7 +57,8 @@ def main():
             running = False
 
     print("SERIAL OUTPUT:", "".join(serial_output))
-    print(f"Stopped after {count} instructions at PC {reg.pc:04X}")
+    print(f"Stopped after {count} instructions at PC {reg.pc:04X}")(
+    print(f"Total cycles executed: {total_cycles}"))
     print(f"Registers: {reg}")
 
 
