@@ -13,7 +13,7 @@ class Registers():
 
         self.ime = False
         self.halted = False
-
+        self.ime_pending = False
 
     ### Register pairs
     @property

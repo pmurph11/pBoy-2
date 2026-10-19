@@ -32,10 +32,14 @@ def main():
         interrupt_cycles = service_interrupts(mem, reg)
         if reg.halted:                                                
             cycles = 4                                                
-        else:                                                         
+        else:         
+            enable_ime = reg.ime_pending                                                
             addr = reg.pc                                             
             opcode = fetch_opcode(mem, reg)                           
             running, display_opcode, cycles = decode(mem, reg, opcode)
+            if enable_ime and reg.ime_pending:
+                reg.ime = True
+                reg.ime_pending = False 
         cycles += interrupt_cycles
         total_cycles += cycles
         line_cycles += cycles

@@ -634,6 +634,7 @@ def decode(mem, reg, opcode):
             ld_a_c(mem, reg)
         case 0xF3:
             reg.ime = False
+            reg.ime_pending = False
         case 0xF5:
             push_r16(mem, reg, 'a', 'f')
         case 0xF7:
@@ -645,10 +646,8 @@ def decode(mem, reg, opcode):
         case 0xFA:
             ld_a_a16(mem, reg)
         case 0xFB:
-            # EI — on real hardware interrupts are enabled AFTER the next
-            # instruction executes, not immediately. Harmless until
-            # interrupt dispatch exists; revisit then.
-            reg.ime = True
+            # EI — pending
+            reg.ime_pending = True
         case 0xFF:
             rst(mem, reg, 0x38)
         case _:
