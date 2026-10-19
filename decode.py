@@ -34,6 +34,84 @@ for dst_index in range(len(r8_order)):
             continue
         ld_r8_r8_table[opcode] = (dst_index, src_index)
         
+MATCH_CYCLES = {
+    0x00: 4, 
+    0x07: 4,
+    0x0F: 4,
+    0x10: 4,
+    0x17: 4,
+    0x1F: 4,
+    0x27: 4,
+    0x2F: 4,
+    0x37: 4,
+    0x3F: 4,
+    0x76: 4,  # HALT instruction
+    0xE9: 4,  # JP (HL)
+    0xF3: 4,  # DI
+    0xFB: 4,  # EI
+
+    0x02: 8,
+    0x03: 8,
+    0x06: 8,
+    0x0A: 8,
+    0x0B: 8,
+    0x0E: 8,
+    0x12: 8,
+    0x13: 8,
+    0x16: 8,
+    0x1A: 8,
+    0x1B: 8,
+    0x1E: 8,
+    0x22: 8,
+    0x23: 8,
+    0x26: 8,
+    0x2A: 8,
+    0x2B: 8,
+    0x2E: 8,
+    0x32: 8,
+    0x33: 8,
+    0x3A: 8,
+    0x3B: 8,
+    0x3E: 8,
+    0x77: 8,
+    0xE2: 8,
+    0xF2: 8,
+    0xF9: 8,
+
+    0x01: 12,
+    0x11: 12,
+    0x18: 12,
+    0x21: 12,
+    0x31: 12,
+    0x36: 12,
+    0xE0: 12,
+    0xF0: 12,
+    0xF8: 12,
+
+    0xC3: 16,
+    0xC5: 16,
+    0xC7: 16,
+    0xC9: 16,
+    0xCF: 16,
+    0xD5: 16,
+    0xD7: 16,
+    0xD9: 16,
+    0xDF: 16,
+    0xE5: 16,
+    0xE7: 16,
+    0xE8: 16,
+    0xEA: 16,
+    0xEF: 16,
+    0xF5: 16,
+    0xF7: 16,
+    0xFA: 16,
+    0xFF: 16,
+
+    0x08: 20,
+
+    0xCD: 24
+}
+    
 # --- 8-bit Load instructions ---
 def ld_r8_d8(mem, reg, reg_name):
     r8 = fetch_byte(mem, reg)
@@ -558,4 +636,4 @@ def decode(mem, reg, opcode):
             print(f"Unknown opcode: {opcode:02X} at PC {(reg.pc - 1) & 0xFFFF:04X}")
             print(f"  Registers: {reg}")
             return False, opcode, 0
-    return True, opcode, 4
+    return True, opcode, MATCH_CYCLES[opcode]
