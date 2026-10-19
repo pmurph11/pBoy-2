@@ -7,7 +7,7 @@ from decode import decode
 def main():
 
     debug = False   # Set for debugging
-
+    
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
     cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/06-ld r,r.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11
@@ -23,29 +23,32 @@ def main():
     count = 0
     running = True
     instruction_count = 0
+    line_cycles = 0
     ly = 0
     boot_rom_active = True
     total_cycles = 0
     
     while running:
-        # Fake scanline counter for LY register, incrementing every 10 instructions
-        instruction_count += 1
-        if instruction_count >= 10:
-            instruction_count = 0
-            ly += 1
-            if ly > 153:
-                ly = 0
-            mem[0xFF44] = ly  # Update LY register
 
         addr = reg.pc
         opcode = fetch_opcode(mem, reg)
         running, display_opcode, cycles = decode(mem, reg, opcode)
         total_cycles += cycles
+        line_cycles += cycles
+
+        if line_cycles >= 456:
+            line_cycles -= 456
+            ly += 1
+            if ly > 153:
+                ly = 0
+            mem[0xFF44] = ly  # Update LY register
+
         if boot_rom_active and mem[0xFF50] != 0x00:
             print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
             mem[0x0000:0x0100] = first_256_bytes  
             boot_rom_active = False
         prefix = "CB " if opcode == 0xCB else ""
+
 
         # Show debug if count between x-x value
         # if count > 2525000:
