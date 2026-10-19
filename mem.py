@@ -23,6 +23,8 @@ def write_byte(mem, addr, val):
         serial_output.append(chr(mem[0xFF01]))
         mem[0xFF02] = val & 0x7F   # clear bit 7 = transfer finished
 
+    if addr == 0xFF04:
+        mem[0xFF04] = 0
     if debug:
         print(f"    write_byte @ {addr:04X} <- {val:02X}")
 
