@@ -12,6 +12,7 @@ class Registers():
         self.sp = 0x0000
 
         self.ime = False
+        self.halted = False
 
 
     ### Register pairs

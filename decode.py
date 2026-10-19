@@ -291,8 +291,12 @@ def push_pc(mem, reg):
 def service_interrupts(mem, reg):
     pending = mem[0xFFFF] & mem[0xFF0F]
 
+    if pending != 0:
+        reg.halted = False
+
     if pending == 0 or reg.ime == False:
         return 0
+    
     for n in range(5):
         if pending & (1 << n):
             reg.ime = False
@@ -583,7 +587,7 @@ def decode(mem, reg, opcode):
         case 0x3F:
             ccf(reg)  
         case 0x76:
-            pass  # HALT instruction, do nothing for now            
+            reg.halted = True   # HALT Interrupt
         case 0x77:
             ld_hl_a(mem, reg)
         case 0xC3:

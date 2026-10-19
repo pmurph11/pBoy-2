@@ -29,11 +29,14 @@ def main():
     
     while running:
 
-        init_cycles = service_interrupts(mem, reg)
-        addr = reg.pc
-        opcode = fetch_opcode(mem, reg)
-        running, display_opcode, cycles = decode(mem, reg, opcode)
-        cycles += init_cycles
+        interrupt_cycles = service_interrupts(mem, reg)
+        if reg.halted:                                                
+            cycles = 4                                                
+        else:                                                         
+            addr = reg.pc                                             
+            opcode = fetch_opcode(mem, reg)                           
+            running, display_opcode, cycles = decode(mem, reg, opcode)
+        cycles += interrupt_cycles
         total_cycles += cycles
         line_cycles += cycles
 
