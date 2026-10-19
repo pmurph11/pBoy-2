@@ -1,6 +1,6 @@
 from cpu import Registers
 from mem import load_rom, fetch_opcode, serial_output
-from decode import decode
+from decode import decode, service_interrupts
 
 
 
@@ -10,7 +10,7 @@ def main():
     
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/06-ld r,r.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11
+    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/02-interrupts.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
 
@@ -29,9 +29,11 @@ def main():
     
     while running:
 
+        init_cycles = service_interrupts(mem, reg)
         addr = reg.pc
         opcode = fetch_opcode(mem, reg)
         running, display_opcode, cycles = decode(mem, reg, opcode)
+        cycles += init_cycles
         total_cycles += cycles
         line_cycles += cycles
 

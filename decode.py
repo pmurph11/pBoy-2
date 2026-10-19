@@ -288,6 +288,21 @@ def push_pc(mem, reg):
     reg.sp = (reg.sp - 1) & 0xFFFF
     write_byte(mem, reg.sp, reg.pc & 0xFF)  # Low byte
 
+def service_interrupts(mem, reg):
+    pending = mem[0xFFFF] & mem[0xFF0F]
+
+    if pending == 0 or reg.ime == False:
+        return 0
+    for n in range(5):
+        if pending & (1 << n):
+            reg.ime = False
+            mem[0xFF0F] &= ~(1 << n)
+
+            push_pc(mem, reg)
+            reg.pc = 0x40 + n * 8
+            return 20
+    return 0
+
 def ret(mem, reg):
     low = mem[reg.sp]
     reg.sp = (reg.sp + 1) & 0xFFFF
