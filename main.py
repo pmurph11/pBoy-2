@@ -22,7 +22,6 @@ def main():
     mem[0x0000:0x0100] = boot_rom_data
     count = 0
     running = True
-    instruction_count = 0
     line_cycles = 0
     ly = 0
     boot_rom_active = True
@@ -42,6 +41,8 @@ def main():
             if ly > 153:
                 ly = 0
             mem[0xFF44] = ly  # Update LY register
+            if ly == 144:
+                mem[0xFF0F] |= 0x01 
 
         if boot_rom_active and mem[0xFF50] != 0x00:
             print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
