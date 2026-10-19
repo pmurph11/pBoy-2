@@ -10,7 +10,7 @@ def main():
     
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/02-interrupts.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11
+    cartridge_path = "roms/06-ld r,r.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
 
@@ -23,6 +23,7 @@ def main():
     count = 0
     running = True
     line_cycles = 0
+    div_cycles = 0
     ly = 0
     boot_rom_active = True
     total_cycles = 0
@@ -52,6 +53,11 @@ def main():
             mem[0xFF44] = ly  # Update LY register
             if ly == 144:
                 mem[0xFF0F] |= 0x01 
+
+        div_cycles += cycles
+        if div_cycles >= 256:
+            div_cycles -= 256
+            mem[0xFF04] = (mem[0xFF04] + 1) & 0xFF
 
         if boot_rom_active and mem[0xFF50] != 0x00:
             print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
