@@ -2,7 +2,7 @@ from cpu import Registers
 from mem import load_rom, fetch_opcode, serial_output
 from decode import decode, service_interrupts
 
-
+TIMA_PERIODS = [1024, 16, 64, 256]
 
 def main():
 
@@ -10,7 +10,7 @@ def main():
     
     reg = Registers()
     boot_rom_path = "roms/dmg_boot.bin"
-    cartridge_path = "roms/06-ld r,r.gb" # Passes 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11
+    cartridge_path = "roms/gb-test-roms-master/cpu_instrs/individual/02-interrupts.gb" # Passes 01, 02, 03, 04, 05, 06, 07, 08, 09, 10 and 11
     rom_data = load_rom(cartridge_path)
     boot_rom_data = load_rom(boot_rom_path)
 
@@ -27,6 +27,7 @@ def main():
     ly = 0
     boot_rom_active = True
     total_cycles = 0
+    tima_cycles = 0
     
     while running:
 
@@ -59,6 +60,17 @@ def main():
             div_cycles -= 256
             mem[0xFF04] = (mem[0xFF04] + 1) & 0xFF
 
+        if mem[0xFF07] & 0x04:
+            tima_cycles += cycles
+            period = TIMA_PERIODS[mem[0xFF07] & 0x03]
+            while tima_cycles >= period:
+                tima_cycles -= period
+                if mem[0xFF05] == 0xFF:
+                    mem[0xFF05] = mem[0xFF06]
+                    mem[0xFF0F] |= 0x04
+                else:
+                    mem[0xFF05] = (mem[0xFF05] + 1) & 0xFF
+
         if boot_rom_active and mem[0xFF50] != 0x00:
             print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
             mem[0x0000:0x0100] = first_256_bytes  
@@ -73,7 +85,7 @@ def main():
         if debug:
             print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count >= 9000000:
+        if count >= 10000000:
             running = False
 
     print("SERIAL OUTPUT:", "".join(serial_output))

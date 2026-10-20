@@ -6,7 +6,7 @@ from alu import (ADD_16, N_MASK, H_MASK, Z_MASK, C_MASK, POP_PUSH, add_sp_r8,
                  Z_MASK, C_MASK)   
 
 
-r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None represents (HL) which is not handled here
+r8_order = ['b', 'c', 'd', 'e', 'h', 'l', None, 'a']  # None == (HL) 
 
 # Misc 
 def ld_r16_a(mem, reg, pair_name):
@@ -30,7 +30,7 @@ ld_r8_r8_table = {}
 for dst_index in range(len(r8_order)):
     for src_index in range(len(r8_order)):
         opcode = 0x40 + (dst_index << 3) + src_index
-        if opcode == 0x76:  # HALT instruction, not a valid LD instruction
+        if opcode == 0x76:  # skip HALT instruction
             continue
         ld_r8_r8_table[opcode] = (dst_index, src_index)
         
@@ -195,7 +195,6 @@ def ld_sp_d16(mem, reg):
     low = fetch_byte(mem, reg)
     high = fetch_byte(mem, reg)
     reg.sp = (high << 8) | low
-    # Flags: Z=0, N=0, H=0, C=0
 
 def ld_sp_hl(mem, reg):
     reg.sp = reg.hl
@@ -282,7 +281,7 @@ def push_r16(mem, reg, high_name, low_name):
     write_byte(mem, reg.sp, low)
 
 def push_pc(mem, reg):
-    # PUSH PC onto the stack, high byte first, then low byte
+    # PUSH PC onto the stack, high byte first, then low byte 
     reg.sp = (reg.sp - 1) & 0xFFFF
     write_byte(mem, reg.sp, (reg.pc >> 8) & 0xFF)  # High byte
     reg.sp = (reg.sp - 1) & 0xFFFF
@@ -320,13 +319,13 @@ def reti(mem, reg):
     reg.ime = True # Enable interrupts after returning
 
 def stop(mem, reg):
-    fetch_byte(mem, reg)  # Consume the next byte (0x00)
+    fetch_byte(mem, reg)  
 
 def decode_cb(mem, reg):
     cb_opcode = fetch_byte(mem, reg)
     operand_index = cb_opcode & 0x07
     cycles = 8
-    if operand_index == 6:  # (HL) is accessed, takes extra cycles
+    if operand_index == 6:  # (HL) takes extra cycles
         cycles = 16
 
     # CB families
@@ -587,7 +586,7 @@ def decode(mem, reg, opcode):
         case 0x3F:
             ccf(reg)  
         case 0x76:
-            reg.halted = True   # HALT Interrupt
+            reg.halted = True   
         case 0x77:
             ld_hl_a(mem, reg)
         case 0xC3:
@@ -646,7 +645,6 @@ def decode(mem, reg, opcode):
         case 0xFA:
             ld_a_a16(mem, reg)
         case 0xFB:
-            # EI — pending
             reg.ime_pending = True
         case 0xFF:
             rst(mem, reg, 0x38)
