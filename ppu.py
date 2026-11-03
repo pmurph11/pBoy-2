@@ -1,11 +1,46 @@
-from mem import Registers
-
-reg = Registers()
-
 def tile_pixel(mem, tile_addr, row, col):
-    low_byte = mem[reg.pc]
-    high_byte = mem[reg.pc]
+    low_byte = mem[tile_addr + row * 2]
+    high_byte = mem[tile_addr + row * 2 + 1]
     bit = 7 - col
     low = (low_byte >> bit) & 1
     high =(high_byte >> bit) & 1
     return (high << 1) | low
+
+def bg_pixel(mem, x, y):
+    SCX = mem[0xFF43]
+    SCY = mem[0xFF42]
+
+    bx = (x + SCX) & 0xFF
+    by = (y + SCY) & 0xFF
+
+    map_col = bx // 8
+    map_row = by // 8
+    tile_col = bx % 8
+    tile_row = by % 8
+
+    map_addr = 0x9800 + map_row * 32 + map_col
+    tile_num = mem[map_addr]
+
+    tile_addr = 0x8000 + tile_num * 16
+
+    return tile_pixel(mem, tile_addr, tile_row, tile_col)
+
+# Print BG rectangle helper
+def print_bg_area(mem, left, top, width, height):
+    for y in range(top, top + height):
+        for x in range(left, left +width):
+            if bg_pixel(mem, x, y) != 0:
+                print("#", end="")
+            else:
+                print(".", end="")
+        print()
+
+# Print tile helper
+def print_tile(mem, tile_addr):
+    for row in range(8):
+        for col in range(8):
+            if tile_pixel(mem, tile_addr, row, col) != 0:
+                print("#", end="")
+            else:
+                print(".", end="")
+        print()
