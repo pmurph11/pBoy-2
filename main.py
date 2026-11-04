@@ -1,7 +1,7 @@
 from cpu import Registers
 from mem import load_rom, fetch_opcode, serial_output
 from decode import decode, service_interrupts
-from ppu import print_bg_area, print_tile
+from ppu import print_bg_area, print_tile, render_background
 
 TIMA_PERIODS = [1024, 16, 64, 256]
 
@@ -75,7 +75,8 @@ def main():
         if boot_rom_active and mem[0xFF50] != 0x00:
             print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
             mem[0x0000:0x0100] = first_256_bytes  
-            print_bg_area(mem, 32, 64, 96, 16)
+            frame = render_background(mem)
+            print(len(frame), len(frame[0]), frame[64][32])
             boot_rom_active = False
         prefix = "CB " if opcode == 0xCB else ""
 

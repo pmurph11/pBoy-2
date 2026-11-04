@@ -44,3 +44,16 @@ def print_tile(mem, tile_addr):
             else:
                 print(".", end="")
         print()
+
+def render_background(mem):
+    bgp = mem[0xFF47]
+
+    grid = []
+    for y in range(144):
+        row = []
+        for x in range(160):
+            value = bg_pixel(mem, x, y)
+            row.append((bgp >>(value * 2)) & 0b11)
+        grid.append(row)
+
+    return grid
