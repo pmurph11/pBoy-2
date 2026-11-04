@@ -30,6 +30,8 @@ def main():
     total_cycles = 0
     tima_cycles = 0
     
+    frame_count = 0
+
     while running:
 
         interrupt_cycles = service_interrupts(mem, reg)
@@ -54,7 +56,10 @@ def main():
                 ly = 0
             mem[0xFF44] = ly  # Update LY register
             if ly == 144:
-                mem[0xFF0F] |= 0x01 
+                frame_count += 1
+                if frame_count % 20 == 0:
+                    frame = render_background(mem)
+                    save_png(frame, f"frame_{frame_count:05d}.png")
 
         div_cycles += cycles
         if div_cycles >= 256:
@@ -88,7 +93,7 @@ def main():
         if debug:
             print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count >= 3000000:
+        if count >= 10000000:
             running = False
 
     print("SERIAL OUTPUT:", "".join(serial_output))
