@@ -3,14 +3,22 @@ from PIL import Image
 SHADE_TO_GREY = [255, 170, 85, 0]
 
 
-def save_png(frame, filename):
-    img = Image.new('L', (160, 144))
+
+def frame_to_image(frame):
+    img = Image.new('L', (160, 144))                              # job 1, moved here
 
     for y in range(144):
         for x in range(160):
             img.putpixel((x, y), SHADE_TO_GREY[frame[y][x]])
 
-    img.save(filename)
+    return img                                                    # NEW: hand the image back
+
+def save_png(frame, filename):
+    img = frame_to_image(frame)                                   # NEW: get the image from above
+    img.save(filename)                                            # job 2, unchanged
+
+def save_gif(images, filename):
+    images[0].save(filename, save_all=True, append_images=images[1:], duration=20, loop=0) 
 
 def tile_pixel(mem, tile_addr, row, col):
     low_byte = mem[tile_addr + row * 2]

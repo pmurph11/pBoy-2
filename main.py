@@ -1,7 +1,7 @@
 from cpu import Registers
 from mem import load_rom, fetch_opcode, serial_output
 from decode import decode, service_interrupts
-from ppu import save_png, render_background
+from ppu import save_png, save_gif, frame_to_image, render_background
 
 TIMA_PERIODS = [1024, 16, 64, 256]
 
@@ -29,8 +29,7 @@ def main():
     boot_rom_active = True
     total_cycles = 0
     tima_cycles = 0
-    
-    frame_count = 0
+    boot_frames = []
 
     while running:
 
@@ -56,10 +55,10 @@ def main():
                 ly = 0
             mem[0xFF44] = ly  # Update LY register
             if ly == 144:
-                frame_count += 1
-                if frame_count % 20 == 0:
-                    frame = render_background(mem)
-                    save_png(frame, f"frame_{frame_count:05d}.png")
+                if boot_rom_active:
+                    img = frame_to_image(render_background(mem))
+                    boot_frames.append(img)
+
 
         div_cycles += cycles
         if div_cycles >= 256:
@@ -78,6 +77,7 @@ def main():
                     mem[0xFF05] = (mem[0xFF05] + 1) & 0xFF
 
         if boot_rom_active and mem[0xFF50] != 0x00:
+            save_gif(boot_frames, "boot.gif")
             print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
             mem[0x0000:0x0100] = first_256_bytes  
             frame = render_background(mem)
