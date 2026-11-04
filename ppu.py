@@ -1,3 +1,17 @@
+from PIL import Image
+
+SHADE_TO_GREY = [255, 170, 85, 0]
+
+
+def save_png(frame, filename):
+    img = Image.new('L', (160, 144))
+
+    for y in range(144):
+        for x in range(160):
+            img.putpixel((x, y), SHADE_TO_GREY[frame[y][x]])
+
+    img.save(filename)
+
 def tile_pixel(mem, tile_addr, row, col):
     low_byte = mem[tile_addr + row * 2]
     high_byte = mem[tile_addr + row * 2 + 1]

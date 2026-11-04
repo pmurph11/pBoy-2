@@ -1,7 +1,7 @@
 from cpu import Registers
 from mem import load_rom, fetch_opcode, serial_output
 from decode import decode, service_interrupts
-from ppu import print_bg_area, print_tile, render_background
+from ppu import save_png, render_background
 
 TIMA_PERIODS = [1024, 16, 64, 256]
 
@@ -76,7 +76,7 @@ def main():
             print("Boot ROM handover complete. Restoring first 256 bytes of cartridge ROM.")
             mem[0x0000:0x0100] = first_256_bytes  
             frame = render_background(mem)
-            print(len(frame), len(frame[0]), frame[64][32])
+            save_png(frame, "logo.png")
             boot_rom_active = False
         prefix = "CB " if opcode == 0xCB else ""
 
@@ -88,7 +88,7 @@ def main():
         if debug:
             print(f"PC: {addr:04X}, Opcode: {prefix}{display_opcode:02X}, Registers: {reg}")
         count += 1
-        if count >= 10000000:
+        if count >= 3000000:
             running = False
 
     print("SERIAL OUTPUT:", "".join(serial_output))
