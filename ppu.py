@@ -25,7 +25,12 @@ def bg_pixel(mem, x, y):
     map_addr = map_base + map_row * 32 + map_col
     tile_num = mem[map_addr]
 
-    tile_addr = 0x8000 + tile_num * 16
+    if mem[0xFF40] & 0x10:
+        tile_addr = 0x8000 + tile_num * 16
+    else:
+        if tile_num >= 0x80:
+            tile_num -= 0x100
+            tile_addr = 0x9000 + tile_num * 16
 
     return tile_pixel(mem, tile_addr, tile_row, tile_col)
 
