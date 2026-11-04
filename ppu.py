@@ -30,7 +30,7 @@ def bg_pixel(mem, x, y):
     else:
         if tile_num >= 0x80:
             tile_num -= 0x100
-            tile_addr = 0x9000 + tile_num * 16
+        tile_addr = 0x9000 + tile_num * 16
 
     return tile_pixel(mem, tile_addr, tile_row, tile_col)
 
